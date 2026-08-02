@@ -422,8 +422,10 @@ app.get("/api/pdf/:examKey", requireSession("siswa"), async (req, res) => {
     track(req, "minta_pdf", `Meminta berkas soal ${title}`);
 
     let buf = null;
-    if (file && file.driveFileId) {
-        buf = await fetchDrivePdf(file.driveFileId);
+    // Prioritas File ID: tabel `exams` di Supabase > env var di config.
+    const driveFileId = await store.getExamDriveFileId(examKey);
+    if (driveFileId) {
+        buf = await fetchDrivePdf(driveFileId);
     }
 
     if (buf) {

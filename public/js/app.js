@@ -17,9 +17,26 @@ const PDFJS_CDN = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.mi
 const PDFJS_WORKER = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 
 const EXAM_LABELS = {
+    agama: "Pendidikan Agama & Budi Pekerti",
+    ppkn: "PPKn",
     indonesia: "Bahasa Indonesia",
     matematika: "Matematika",
     ipa: "IPA",
+    ips: "IPS",
+    inggris: "Bahasa Inggris",
+    seni: "Seni Budaya",
+    pjok: "PJOK",
+    prakarya: "Prakarya",
+    informatika: "Informatika",
+    mulok_bahasa_daerah: "Muatan Lokal Bahasa Daerah",
+    mulok_bahasa_asing: "Muatan Lokal Bahasa Asing",
+    pendalaman_agama: "Pendalaman Agama",
+    bimbingan_konseling: "Bimbingan Konseling",
+    literasi: "Literasi Digital",
+    kewirausahaan: "Kewirausahaan",
+    matematika_tambahan: "Matematika Tambahan",
+    ipa_tambahan: "IPA Tambahan",
+    ips_tambahan: "IPS Tambahan",
 };
 
 const EVENT_LABELS = {

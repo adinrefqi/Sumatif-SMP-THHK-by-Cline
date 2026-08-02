@@ -64,38 +64,102 @@ Mode demo memakai penyimpanan **in-memory** (data hilang saat server restart) da
 
 ---
 
-## 3. Konfigurasi Berkas Soal (Google Drive)
+## 3. Konfigurasi Berkas Soal (Google Drive) — 20 Mata Pelajaran
 
-Buka **`server/config.js`** dan ganti `driveFileId` untuk setiap mapel dengan ID berkas Google Drive Anda:
+Aplikasi mendukung **20 mata pelajaran** (lihat daftar di bawah). Setiap mapel bisa memiliki PDF soal sendiri di Google Drive.
 
-```js
-examFiles: {
-    indonesia: {
-        title: "Bahasa Indonesia",
-        driveFileId: "1ABCxyz...", // ganti dengan ID berkas publik Anda
-    },
-    // ...
-}
+### 3.1 Cara Upload PDF ke Google Drive
+
+1. Buka **https://drive.google.com** → **New → File upload** (atau *drag & drop* file PDF soal).
+2. Klik **kanan file** → **Share** → ubah akses menjadi **"Anyone with the link"** → pilih **Viewer** → **Done**.
+3. Klik **Share → Copy link** — link akan berbentuk:
+   ```
+   https://drive.google.com/file/d/<FILE_ID>/view
+   ```
+4. Ambil bagian **`<FILE_ID>`** (karakter di antara `/d/` dan `/view`).
+   Contoh: dari `https://drive.google.com/file/d/1AbCdEfGhIjKlMnOpQrStUvWxYz/view`
+   → File ID-nya adalah `1AbCdEfGhIjKlMnOpQrStUvWxYz`
+
+### 3.2 Cara Menautkan PDF ke Mapel (2 Opsi)
+
+**✅ Opsi 1 (disarankan) — Isi lewat Supabase Dashboard:**
+
+Tanpa edit kode / tanpa redeploy. Setelah upload 20 PDF, cukup isi tabel `exams`:
+
+1. Buka **Supabase Dashboard → Table Editor → `exams`**
+2. Untuk setiap baris mapel, isi kolom **`drive_file_id`** dengan File ID dari langkah 3.1
+3. Server otomatis memakai File ID tersebut (prioritas utama)
+
+| exam_key | title | drive_file_id |
+|----------|-------|---------------|
+| `agama` | Pendidikan Agama & Budi Pekerti | `1AbC...` |
+| `ppkn` | PPKn | `1Def...` |
+| `indonesia` | Bahasa Indonesia | `1Ghi...` |
+| `matematika` | Matematika | `1Jkl...` |
+| `ipa` | IPA | `1Mno...` |
+| `ips` | IPS | `1Pqr...` |
+| `inggris` | Bahasa Inggris | `1Stu...` |
+| `seni` | Seni Budaya | `1Vwx...` |
+| `pjok` | PJOK | `1Yz0...` |
+| `prakarya` | Prakarya | `1A11...` |
+| `informatika` | Informatika | `1B22...` |
+| `mulok_bahasa_daerah` | Muatan Lokal Bahasa Daerah | `1C33...` |
+| `mulok_bahasa_asing` | Muatan Lokal Bahasa Asing | `1D44...` |
+| `pendalaman_agama` | Pendalaman Agama | `1E55...` |
+| `bimbingan_konseling` | Bimbingan Konseling | `1F66...` |
+| `literasi` | Literasi Digital | `1G77...` |
+| `kewirausahaan` | Kewirausahaan | `1H88...` |
+| `matematika_tambahan` | Matematika Tambahan | `1I99...` |
+| `ipa_tambahan` | IPA Tambahan | `1J00...` |
+| `ips_tambahan` | IPS Tambahan | `1K11...` |
+
+**✅ Opsi 2 — Isi Environment Variables di Vercel:**
+
+Jika lebih suka env var, buka **Vercel → Project Settings → Environment Variables** dan tambahkan `DRIVE_ID_<KEY>`:
+
+```bash
+DRIVE_ID_INDONESIA=<file_id>
+DRIVE_ID_MATEMATIKA=<file_id>
+DRIVE_ID_IPA=<file_id>
+# ... dst untuk semua mapel
 ```
 
-Cara mendapatkan ID:
-- Buka berkas di Google Drive → *Share* → set **"Anyone with the link"** → *Viewer*.
-- Klik *Share* → *Copy link* → link berbentuk `https://drive.google.com/file/d/<FILE_ID>/view` → ambil bagian `<FILE_ID>`.
+> Prioritas: **tabel `exams` Supabase** > **env var Vercel** > **PDF demo**.
+
+### Daftar 20 Mata Pelajaran
+
+| # | exam_key | Mapel |
+|---|----------|-------|
+| 1 | `agama` | Pendidikan Agama & Budi Pekerti |
+| 2 | `ppkn` | PPKn |
+| 3 | `indonesia` | Bahasa Indonesia |
+| 4 | `matematika` | Matematika |
+| 5 | `ipa` | IPA |
+| 6 | `ips` | IPS |
+| 7 | `inggris` | Bahasa Inggris |
+| 8 | `seni` | Seni Budaya |
+| 9 | `pjok` | PJOK |
+| 10 | `prakarya` | Prakarya |
+| 11 | `informatika` | Informatika |
+| 12 | `mulok_bahasa_daerah` | Muatan Lokal Bahasa Daerah |
+| 13 | `mulok_bahasa_asing` | Muatan Lokal Bahasa Asing |
+| 14 | `pendalaman_agama` | Pendalaman Agama |
+| 15 | `bimbingan_konseling` | Bimbingan Konseling |
+| 16 | `literasi` | Literasi Digital |
+| 17 | `kewirausahaan` | Kewirausahaan |
+| 18 | `matematika_tambahan` | Matematika Tambahan |
+| 19 | `ipa_tambahan` | IPA Tambahan |
+| 20 | `ips_tambahan` | IPS Tambahan |
+
+> Mapel bisa ditambah/diubah di `server/config.js` + `public/js/app.js` (EXAM_LABELS) + tabel `exams`.
+
+### Keamanan Proxy PDF
 
 Server mengambil PDF dari Google Drive di sisi server lalu mengalirkannya ke browser. Kekuatan keamanan:
 
 - Tautan asli Google Drive **tidak pernah** dikirim ke frontend.
 - Response diberi `Content-Disposition: inline`, `Cache-Control: no-store`, dan disajikan hanya untuk siswa yang sesinya sudah **presensi + token valid**.
-- Jika pengambilan Google Drive gagal, sistem memakai **fallback PDF demo** agar alur tetap berjalan.
-
-### Konfigurasi via environment variables
-
-```bash
-set DRIVE_ID_INDONESIA=<file_id>
-set DRIVE_ID_MATEMATIKA=<file_id>
-set DRIVE_ID_IPA=<file_id>
-npm start
-```
+- Jika File ID belum diisi lalu pengambilan gagal, sistem memakai **fallback PDF demo** agar alur tetap berjalan.
 
 ---
 

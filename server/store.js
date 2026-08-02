@@ -82,6 +82,12 @@ class MemoryStore {
         Object.assign(session, state);
     }
 
+    /* ---------------- Mapel / PDF ---------------- */
+    async getExamDriveFileId(examKey) {
+        const f = config.examFiles[examKey];
+        return f ? f.driveFileId || "" : "";
+    }
+
     /* ---------------- Presensi (siswa) ---------------- */
     addAttendance({ sessionId, name, className, examKey, examTitle, room }) {
         const record = {
@@ -406,6 +412,29 @@ class SupabaseStore {
             .from(this.tables.users)
             .update({ active: false })
             .eq("token", token);
+    }
+
+    /* ---------------- Mapel / PDF ---------------- */
+    /* Mengambil Google Drive File ID untuk mapel tertentu.
+     * Prioritas: tabel `exams` di Supabase > env var di config.
+     * Tabel `exams` diisi lewat Supabase Dashboard (Table Editor)
+     * sehingga tidak perlu edit kode/redeploy saat mengganti PDF. */
+    async getExamDriveFileId(examKey) {
+        const f = config.examFiles[examKey];
+        const fallback = f ? f.driveFileId || "" : "";
+        try {
+            const { data, error } = await this.client
+                .from(this.tables.exams)
+                .select("drive_file_id")
+                .eq("exam_key", examKey)
+                .maybeSingle();
+            if (!error && data && data.drive_file_id) {
+                return data.drive_file_id;
+            }
+        } catch (e) {
+            // fallback ke env var config
+        }
+        return fallback;
     }
 
     /* ---------------- Presensi (siswa) ---------------- */

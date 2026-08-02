@@ -17,10 +17,38 @@ module.exports = {
     // Format tautan: https://drive.google.com/file/d/<FILE_ID>/view
     // Cara membuat tautan unduhan langsung tanpa API key:
     //   https://drive.google.com/uc?export=download&id=<FILE_ID>
+    //
+    // CARA MENGATUR PDF PER MAPEL (2 opsi):
+    //   Opsi 1 (disarankan, tanpa edit kode):
+    //     Simpan File ID di tabel Supabase `exams`:
+    //     - Buka Supabase Dashboard → Table Editor → `exams`
+    //     - Insert/update baris: { exam_key: "matematika", drive_file_id: "<FILE_ID>" }
+    //     - Server otomatis memakai nilai ini (lebih unggul dari env var).
+    //   Opsi 2:
+    //     Isi env variables di Vercel: DRIVE_ID_<KEY> untuk setiap mapel.
+    //
+    // Langkah upload PDF di Google Drive:
+    //   1. Buka https://drive.google.com → New → File upload (atau drag&drop)
+    //   2. Klik kanan file → Share → "Anyone with the link" → Viewer → Done
+    //   3. Klik Share → Copy link → link berbentuk:
+    //      https://drive.google.com/file/d/<FILE_ID>/view
+    //      → ambil bagian <FILE_ID> (karakter antara /d/ dan /view).
+    //   4. Masukkan <FILE_ID> ke Supabase tabel `exams` ATAU Vercel env var.
+    //
+    // CATATAN: driveFileId di bawah hanya fallback env var. Nilai kosong
+    // berarti memakai PDF demo (contoh) sampai diisi.
     examFiles: {
+        // ---- Kelompok A (wajib kurikulum merdeka) ----
+        agama: {
+            title: "Pendidikan Agama & Budi Pekerti",
+            driveFileId: process.env.DRIVE_ID_AGAMA || "",
+        },
+        ppkn: {
+            title: "PPKn",
+            driveFileId: process.env.DRIVE_ID_PPKN || "",
+        },
         indonesia: {
             title: "Bahasa Indonesia",
-            // Kosongkan jika belum ada berkas asli; server akan memakai PDF demo.
             driveFileId: process.env.DRIVE_ID_INDONESIA || "",
         },
         matematika: {
@@ -30,6 +58,69 @@ module.exports = {
         ipa: {
             title: "IPA",
             driveFileId: process.env.DRIVE_ID_IPA || "",
+        },
+        ips: {
+            title: "IPS",
+            driveFileId: process.env.DRIVE_ID_IPS || "",
+        },
+        inggris: {
+            title: "Bahasa Inggris",
+            driveFileId: process.env.DRIVE_ID_INGGRIS || "",
+        },
+        // ---- Kelompok B ----
+        seni: {
+            title: "Seni Budaya",
+            driveFileId: process.env.DRIVE_ID_SENI || "",
+        },
+        pjok: {
+            title: "PJOK",
+            driveFileId: process.env.DRIVE_ID_PJOK || "",
+        },
+        prakarya: {
+            title: "Prakarya",
+            driveFileId: process.env.DRIVE_ID_PRAKARYA || "",
+        },
+        informatika: {
+            title: "Informatika",
+            driveFileId: process.env.DRIVE_ID_INFORMATIKA || "",
+        },
+        // ---- Muatan Lokal (sesuaikan dengan sekolah) ----
+        mulok_bahasa_daerah: {
+            title: "Muatan Lokal Bahasa Daerah",
+            driveFileId: process.env.DRIVE_ID_MULOK_BAHASA_DAERAH || "",
+        },
+        mulok_bahasa_asing: {
+            title: "Muatan Lokal Bahasa Asing",
+            driveFileId: process.env.DRIVE_ID_MULOK_BAHASA_ASING || "",
+        },
+        // ---- Mapel tambahan (sesuaikan kebutuhan) ----
+        pendalaman_agama: {
+            title: "Pendalaman Agama",
+            driveFileId: process.env.DRIVE_ID_PENDALAMAN_AGAMA || "",
+        },
+        bimbingan_konseling: {
+            title: "Bimbingan Konseling",
+            driveFileId: process.env.DRIVE_ID_BK || "",
+        },
+        literasi: {
+            title: "Literasi Digital",
+            driveFileId: process.env.DRIVE_ID_LITERASI || "",
+        },
+        kewirausahaan: {
+            title: "Kewirausahaan",
+            driveFileId: process.env.DRIVE_ID_KEWIRAUSAHAAN || "",
+        },
+        matematika_tambahan: {
+            title: "Matematika Tambahan",
+            driveFileId: process.env.DRIVE_ID_MATEMATIKA_TAMBAHAN || "",
+        },
+        ipa_tambahan: {
+            title: "IPA Tambahan",
+            driveFileId: process.env.DRIVE_ID_IPA_TAMBAHAN || "",
+        },
+        ips_tambahan: {
+            title: "IPS Tambahan",
+            driveFileId: process.env.DRIVE_ID_IPS_TAMBAHAN || "",
         },
     },
 
