@@ -142,8 +142,15 @@ module.exports = {
     ],
 
     // ============ SISWA ============
-    // Kredensial login siswa tanpa SSO (demonstrasi).
+    // Kredensial login siswa tanpa SSO.
+    // username = nama depan (huruf kecil, tanpa spasi)
+    // password = kata sandi default (ganti di produksi bila perlu)
+    //
+    // CATATAN MAPEL: setiap akun siswa terikat SATU mapel (kolom `exam`).
+    // Untuk ujian lintas mapel, pembuat token harus memilih mapel yang
+    // sama dengan sesi siswa tersebut. Ubah kolom `exam` sesuai jadwal.
     studentCredentials: [
+        // ---------- AKUN DEMO (bawaan) ----------
         {
             username: "siswa1",
             password: "rahasia123",
@@ -164,6 +171,198 @@ module.exports = {
             name: "Citra Lestari",
             className: "9B",
             exam: "ipa",
+        },
+
+        // ---------- SISWA KELAS 9 SMP THHK (27 siswa) ----------
+        // Password default semua siswa: thhk2026
+        {
+            username: "calvin",
+            password: "thhk2026",
+            name: "Calvin Fransisco",
+            className: "9A",
+            exam: "indonesia",
+        },
+        {
+            username: "celine",
+            password: "thhk2026",
+            name: "Celine Octavia Kusuma",
+            className: "9A",
+            exam: "indonesia",
+        },
+        {
+            username: "clarice",
+            password: "thhk2026",
+            name: "Clarice Siera Elisabeth Rahardjo",
+            className: "9A",
+            exam: "indonesia",
+        },
+        {
+            username: "clement",
+            password: "thhk2026",
+            name: "Clement Raphael Kurnia",
+            className: "9A",
+            exam: "indonesia",
+        },
+        {
+            username: "desiani",
+            password: "thhk2026",
+            name: "Desiani Natalia Siallagan",
+            className: "9A",
+            exam: "indonesia",
+        },
+        {
+            username: "darwin",
+            password: "thhk2026",
+            name: "Darwin Adelio Alvaro",
+            className: "9A",
+            exam: "indonesia",
+        },
+        {
+            username: "erland",
+            password: "thhk2026",
+            name: "Erland Adriano Budiman",
+            className: "9A",
+            exam: "indonesia",
+        },
+        {
+            username: "faris",
+            password: "thhk2026",
+            name: "Faris Mahardika Luki",
+            className: "9A",
+            exam: "indonesia",
+        },
+        {
+            username: "flourencia",
+            password: "thhk2026",
+            name: "Flourencia Alvina",
+            className: "9A",
+            exam: "indonesia",
+        },
+        {
+            username: "giovanni",
+            password: "thhk2026",
+            name: "Giovanni Agnell Tanuwijaya",
+            className: "9B",
+            exam: "indonesia",
+        },
+        {
+            username: "gisella",
+            password: "thhk2026",
+            name: "Gisella Cellena Cleola Andrian",
+            className: "9B",
+            exam: "indonesia",
+        },
+        {
+            username: "graciana",
+            password: "thhk2026",
+            name: "Graciana Shinta Dewi",
+            className: "9B",
+            exam: "indonesia",
+        },
+        {
+            username: "henedictus",
+            password: "thhk2026",
+            name: "Henedictus Greffy Jeisen Putra",
+            className: "9B",
+            exam: "indonesia",
+        },
+        {
+            username: "ivana",
+            password: "thhk2026",
+            name: "Ivana Jacinda",
+            className: "9B",
+            exam: "indonesia",
+        },
+        {
+            username: "jefferson",
+            password: "thhk2026",
+            name: "Jefferson Setiawan",
+            className: "9B",
+            exam: "indonesia",
+        },
+        {
+            username: "jesslyn1",
+            password: "thhk2026",
+            name: "Jesslyn Anna Belle Arminta Prawiro",
+            className: "9B",
+            exam: "indonesia",
+        },
+        {
+            username: "jesslyn2",
+            password: "thhk2026",
+            name: "Jesslyn Yoewono",
+            className: "9B",
+            exam: "indonesia",
+        },
+        {
+            username: "jocelyn",
+            password: "thhk2026",
+            name: "Jocelyn Octavia Gunawan",
+            className: "9B",
+            exam: "indonesia",
+        },
+        {
+            username: "johan",
+            password: "thhk2026",
+            name: "Johan Faizal",
+            className: "9B",
+            exam: "indonesia",
+        },
+        {
+            username: "keiko",
+            password: "thhk2026",
+            name: "Keiko Lee Yohanes",
+            className: "9C",
+            exam: "indonesia",
+        },
+        {
+            username: "marquez",
+            password: "thhk2026",
+            name: "Marquez Loris",
+            className: "9C",
+            exam: "indonesia",
+        },
+        {
+            username: "michelle",
+            password: "thhk2026",
+            name: "Michelle Angelica Setiono",
+            className: "9C",
+            exam: "indonesia",
+        },
+        {
+            username: "mikhaela",
+            password: "thhk2026",
+            name: "Mikhaela Josephine Soetjipto",
+            className: "9C",
+            exam: "indonesia",
+        },
+        {
+            username: "octavelie",
+            password: "thhk2026",
+            name: "Octavelie Sila Kirana",
+            className: "9C",
+            exam: "indonesia",
+        },
+        {
+            username: "reynaldo",
+            password: "thhk2026",
+            name: "Reynaldo Xavier Alexander Gunawan",
+            className: "9C",
+            exam: "indonesia",
+        },
+        {
+            username: "sebastian",
+            password: "thhk2026",
+            name: "Sebastian Moses Firlandi",
+            className: "9C",
+            exam: "indonesia",
+        },
+        {
+            username: "yuriko",
+            password: "thhk2026",
+            name: "Yuriko Jessi Setiawan",
+            className: "9C",
+            exam: "indonesia",
         },
     ],
 

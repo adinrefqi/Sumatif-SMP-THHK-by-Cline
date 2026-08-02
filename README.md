@@ -26,9 +26,45 @@ Buka **http://localhost:3000**
 | Peran | Username | Password | Keterangan |
 |-------|----------|----------|------------|
 | Pengawas | `pengawas` | `thhk2026` | Memunculkan modal **Berita Acara** wajib |
-| Siswa | `siswa1` | `rahasia123` | Kelas 9A — Bahasa Indonesia |
-| Siswa | `siswa2` | `rahasia123` | Kelas 9A — Matematika |
-| Siswa | `siswa3` | `rahasia123` | Kelas 9B — IPA |
+| Siswa | `siswa1` | `rahasia123` | Kelas 9A — Bahasa Indonesia (demo) |
+| Siswa | `siswa2` | `rahasia123` | Kelas 9A — Matematika (demo) |
+| Siswa | `siswa3` | `rahasia123` | Kelas 9B — IPA (demo) |
+
+### Akun Siswa Kelas 9 SMP THHK (27 siswa)
+
+Password semua siswa: **`thhk2026`** (username = nama depan tanpa spasi).
+
+| No | Username | Nama | Kelas |
+|----|----------|------|-------|
+| 1 | `calvin` | Calvin Fransisco | 9A |
+| 2 | `celine` | Celine Octavia Kusuma | 9A |
+| 3 | `clarice` | Clarice Siera Elisabeth Rahardjo | 9A |
+| 4 | `clement` | Clement Raphael Kurnia | 9A |
+| 5 | `desiani` | Desiani Natalia Siallagan | 9A |
+| 6 | `darwin` | Darwin Adelio Alvaro | 9A |
+| 7 | `erland` | Erland Adriano Budiman | 9A |
+| 8 | `faris` | Faris Mahardika Luki | 9A |
+| 9 | `flourencia` | Flourencia Alvina | 9A |
+| 10 | `giovanni` | Giovanni Agnell Tanuwijaya | 9B |
+| 11 | `gisella` | Gisella Cellena Cleola Andrian | 9B |
+| 12 | `graciana` | Graciana Shinta Dewi | 9B |
+| 13 | `henedictus` | Henedictus Greffy Jeisen Putra | 9B |
+| 14 | `ivana` | Ivana Jacinda | 9B |
+| 15 | `jefferson` | Jefferson Setiawan | 9B |
+| 16 | `jesslyn1` | Jesslyn Anna Belle Arminta Prawiro | 9B |
+| 17 | `jesslyn2` | Jesslyn Yoewono | 9B |
+| 18 | `jocelyn` | Jocelyn Octavia Gunawan | 9B |
+| 19 | `johan` | Johan Faizal | 9B |
+| 20 | `keiko` | Keiko Lee Yohanes | 9C |
+| 21 | `marquez` | Marquez Loris | 9C |
+| 22 | `michelle` | Michelle Angelica Setiono | 9C |
+| 23 | `mikhaela` | Mikhaela Josephine Soetjipto | 9C |
+| 24 | `octavelie` | Octavelie Sila Kirana | 9C |
+| 25 | `reynaldo` | Reynaldo Xavier Alexander Gunawan | 9C |
+| 26 | `sebastian` | Sebastian Moses Firlandi | 9C |
+| 27 | `yuriko` | Yuriko Jessi Setiawan | 9C |
+
+> **Catatan:** Semua siswa Kelas 9 diset memakai mapel `indonesia` (Bahasa Indonesia) untuk saat ini. Ubah kolom `exam` di `server/config.js` sesuai jadwal ujian masing-masing mapel.
 
 ### Token ujian demo
 
