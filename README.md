@@ -64,7 +64,28 @@ Password semua siswa: **`thhk2026`** (username = nama depan tanpa spasi).
 | 26 | `sebastian` | Sebastian Moses Firlandi | 9C |
 | 27 | `yuriko` | Yuriko Jessi Setiawan | 9C |
 
-> **Catatan:** Semua siswa Kelas 9 diset memakai mapel `indonesia` (Bahasa Indonesia) untuk saat ini. Ubah kolom `exam` di `server/config.js` sesuai jadwal ujian masing-masing mapel.
+### Akun Siswa Kelas 8 SMP THHK (14 siswa)
+
+Password semua siswa: **`thhk2026`** (username = nama depan tanpa spasi).
+
+| No | Username | Nama | Kelas |
+|----|----------|------|-------|
+| 1 | `cathleen` | Cathleen Hava Eliora.S | 8A |
+| 2 | `chrisna` | Chrisna Monica Onggowarsito | 8A |
+| 3 | `eleanore` | Eleanore Kimberly Wong | 8A |
+| 4 | `engracia` | Engracia Sarah Chrisyabelle.S | 8A |
+| 5 | `jasson` | Jasson Alvaro Gunarto | 8A |
+| 6 | `jennifer` | Jennifer Aurelia Febriana | 8A |
+| 7 | `keane` | Keane William Gunawan | 8A |
+| 8 | `kenichi` | Kenichi Alvaro Gavriel | 8B |
+| 9 | `keyzia` | Keyzia El Ryansyah | 8B |
+| 10 | `melvin` | Melvin Antan Djaya | 8B |
+| 11 | `akhil` | M. Akhil Fadillah | 8B |
+| 12 | `nathasya` | Nathasya Michelle Lee | 8B |
+| 13 | `nicholas` | Nicholas Willson Kasuya | 8B |
+| 14 | `vincentius` | Vincentius Fernandez Suharto | 8B |
+
+> **Catatan:** Semua siswa Kelas 8 & 9 diset memakai mapel `indonesia` (Bahasa Indonesia) untuk saat ini. Ubah kolom `exam` di `server/config.js` sesuai jadwal ujian masing-masing mapel.
 
 ### Token ujian demo
 
