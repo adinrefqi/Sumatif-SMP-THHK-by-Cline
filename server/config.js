@@ -135,6 +135,14 @@ module.exports = {
     // username = nama depan lowercase (tanpa gelar)
     // password = kata sandi default: thhk2026
     supervisorCredentials: [
+        // ADMIN SUPER USER — login langsung ke dashboard tanpa
+        // diwajibkan mengisi Berita Acara.
+        {
+            username: "admin",
+            password: "admin123",
+            name: "Administrator",
+            role: "Admin",
+        },
         {
             username: "adin",
             password: "thhk2026",

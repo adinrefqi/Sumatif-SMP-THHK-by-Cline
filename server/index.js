@@ -134,6 +134,13 @@ app.post("/api/login", async (req, res) => {
                 name: found.name,
                 role: "pengawas",
             });
+
+            // ADMIN SUPER USER: langsung masuk dashboard tanpa
+            // diwajibkan mengisi Berita Acara.
+            if (found.role === "Admin" || found.username === "admin") {
+                await store.updateSessionState(session.token, { beritaAcaraDone: true }).catch(() => { });
+            }
+
             setSessionCookie(res, session.token);
             track({ session, sessionToken: session.token }, "login_pengawas", `Pengawas ${found.name} masuk`);
             return res.json({

@@ -29,6 +29,12 @@ Buka **http://localhost:3000**
 | Siswa | `siswa2` | `rahasia123` | Kelas 9A — Matematika (demo) |
 | Siswa | `siswa3` | `rahasia123` | Kelas 9B — IPA (demo) |
 
+### Akun Admin Super User
+
+| Username | Password | Keterangan |
+|----------|----------|------------|
+| `admin` | `admin123` | Login langsung ke dashboard — **tidak wajib** mengisi Berita Acara |
+
 ### Akun Pengawas SMP THHK (8 guru)
 
 Password semua pengawas: **`thhk2026`** (username = nama depan tanpa gelar).
