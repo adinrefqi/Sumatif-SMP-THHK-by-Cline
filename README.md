@@ -64,9 +64,9 @@ Mode demo memakai penyimpanan **in-memory** (data hilang saat server restart) da
 
 ---
 
-## 3. Konfigurasi Berkas Soal (Google Drive) — 20 Mata Pelajaran
+## 3. Konfigurasi Berkas Soal (Google Drive) — 19 Mata Pelajaran
 
-Aplikasi mendukung **20 mata pelajaran** (lihat daftar di bawah). Setiap mapel bisa memiliki PDF soal sendiri di Google Drive.
+Aplikasi mendukung **19 mata pelajaran** SMP Tunas Hidup Harapan Kita (lihat daftar di bawah). Setiap mapel bisa memiliki PDF soal sendiri di Google Drive.
 
 ### 3.1 Cara Upload PDF ke Google Drive
 
@@ -84,7 +84,7 @@ Aplikasi mendukung **20 mata pelajaran** (lihat daftar di bawah). Setiap mapel b
 
 **✅ Opsi 1 (disarankan) — Isi lewat Supabase Dashboard:**
 
-Tanpa edit kode / tanpa redeploy. Setelah upload 20 PDF, cukup isi tabel `exams`:
+Tanpa edit kode / tanpa redeploy. Setelah upload 19 PDF, cukup isi tabel `exams`:
 
 1. Buka **Supabase Dashboard → Table Editor → `exams`**
 2. Untuk setiap baris mapel, isi kolom **`drive_file_id`** dengan File ID dari langkah 3.1
@@ -92,26 +92,25 @@ Tanpa edit kode / tanpa redeploy. Setelah upload 20 PDF, cukup isi tabel `exams`
 
 | exam_key | title | drive_file_id |
 |----------|-------|---------------|
-| `agama` | Pendidikan Agama & Budi Pekerti | `1AbC...` |
-| `ppkn` | PPKn | `1Def...` |
-| `indonesia` | Bahasa Indonesia | `1Ghi...` |
-| `matematika` | Matematika | `1Jkl...` |
-| `ipa` | IPA | `1Mno...` |
-| `ips` | IPS | `1Pqr...` |
-| `inggris` | Bahasa Inggris | `1Stu...` |
-| `seni` | Seni Budaya | `1Vwx...` |
-| `pjok` | PJOK | `1Yz0...` |
-| `prakarya` | Prakarya | `1A11...` |
-| `informatika` | Informatika | `1B22...` |
-| `mulok_bahasa_daerah` | Muatan Lokal Bahasa Daerah | `1C33...` |
-| `mulok_bahasa_asing` | Muatan Lokal Bahasa Asing | `1D44...` |
-| `pendalaman_agama` | Pendalaman Agama | `1E55...` |
-| `bimbingan_konseling` | Bimbingan Konseling | `1F66...` |
-| `literasi` | Literasi Digital | `1G77...` |
-| `kewirausahaan` | Kewirausahaan | `1H88...` |
-| `matematika_tambahan` | Matematika Tambahan | `1I99...` |
-| `ipa_tambahan` | IPA Tambahan | `1J00...` |
-| `ips_tambahan` | IPS Tambahan | `1K11...` |
+| `agama_katolik` | Agama Katolik | `1AbC...` |
+| `agama_kristen` | Agama Kristen | `1Def...` |
+| `agama_islam` | Agama Islam | `1Ghi...` |
+| `agama_buddha` | Agama Buddha | `1Jkl...` |
+| `agama_konghucu` | Agama Konghucu | `1Mno...` |
+| `pancasila` | Pendidikan Pancasila | `1Pqr...` |
+| `indonesia` | Bahasa Indonesia | `1Stu...` |
+| `ipa` | IPA | `1Vwx...` |
+| `tik` | TIK | `1Yz0...` |
+| `matematika` | Matematika | `1A11...` |
+| `ips` | IPS | `1B22...` |
+| `inggris` | Bahasa Inggris | `1C33...` |
+| `seni` | Seni Budaya | `1D44...` |
+| `bahasa_jawa` | Bahasa Jawa | `1E55...` |
+| `penjas` | PenJas | `1F66...` |
+| `mandarin` | Bahasa Mandarin | `1G77...` |
+| `bk` | BK | `1H88...` |
+| `native_mandarin` | Native Mandarin | `1I99...` |
+| `coding` | Coding | `1J00...` |
 
 **✅ Opsi 2 — Isi Environment Variables di Vercel:**
 
@@ -126,30 +125,29 @@ DRIVE_ID_IPA=<file_id>
 
 > Prioritas: **tabel `exams` Supabase** > **env var Vercel** > **PDF demo**.
 
-### Daftar 20 Mata Pelajaran
+### Daftar 19 Mata Pelajaran SMP Tunas Hidup Harapan Kita
 
 | # | exam_key | Mapel |
 |---|----------|-------|
-| 1 | `agama` | Pendidikan Agama & Budi Pekerti |
-| 2 | `ppkn` | PPKn |
-| 3 | `indonesia` | Bahasa Indonesia |
-| 4 | `matematika` | Matematika |
-| 5 | `ipa` | IPA |
-| 6 | `ips` | IPS |
-| 7 | `inggris` | Bahasa Inggris |
-| 8 | `seni` | Seni Budaya |
-| 9 | `pjok` | PJOK |
-| 10 | `prakarya` | Prakarya |
-| 11 | `informatika` | Informatika |
-| 12 | `mulok_bahasa_daerah` | Muatan Lokal Bahasa Daerah |
-| 13 | `mulok_bahasa_asing` | Muatan Lokal Bahasa Asing |
-| 14 | `pendalaman_agama` | Pendalaman Agama |
-| 15 | `bimbingan_konseling` | Bimbingan Konseling |
-| 16 | `literasi` | Literasi Digital |
-| 17 | `kewirausahaan` | Kewirausahaan |
-| 18 | `matematika_tambahan` | Matematika Tambahan |
-| 19 | `ipa_tambahan` | IPA Tambahan |
-| 20 | `ips_tambahan` | IPS Tambahan |
+| 1 | `agama_katolik` | Agama Katolik |
+| 2 | `agama_kristen` | Agama Kristen |
+| 3 | `agama_islam` | Agama Islam |
+| 4 | `agama_buddha` | Agama Buddha |
+| 5 | `agama_konghucu` | Agama Konghucu |
+| 6 | `pancasila` | Pendidikan Pancasila |
+| 7 | `indonesia` | Bahasa Indonesia |
+| 8 | `ipa` | IPA |
+| 9 | `tik` | TIK |
+| 10 | `matematika` | Matematika |
+| 11 | `ips` | IPS |
+| 12 | `inggris` | Bahasa Inggris |
+| 13 | `seni` | Seni Budaya |
+| 14 | `bahasa_jawa` | Bahasa Jawa |
+| 15 | `penjas` | PenJas |
+| 16 | `mandarin` | Bahasa Mandarin |
+| 17 | `bk` | BK |
+| 18 | `native_mandarin` | Native Mandarin |
+| 19 | `coding` | Coding |
 
 > Mapel bisa ditambah/diubah di `server/config.js` + `public/js/app.js` (EXAM_LABELS) + tabel `exams`.
 

@@ -38,26 +38,48 @@ module.exports = {
     // CATATAN: driveFileId di bawah hanya fallback env var. Nilai kosong
     // berarti memakai PDF demo (contoh) sampai diisi.
     examFiles: {
-        // ---- Kelompok A (wajib kurikulum merdeka) ----
-        agama: {
-            title: "Pendidikan Agama & Budi Pekerti",
-            driveFileId: process.env.DRIVE_ID_AGAMA || "",
+        // ===== DAFTAR MAPEL SMP TUNAS HIDUP HARAPAN KITA (19 mapel) =====
+        // ---- Pendidikan Agama (pilih sesuai agama siswa) ----
+        agama_katolik: {
+            title: "Agama Katolik",
+            driveFileId: process.env.DRIVE_ID_AGAMA_KATOLIK || "",
         },
-        ppkn: {
-            title: "PPKn",
-            driveFileId: process.env.DRIVE_ID_PPKN || "",
+        agama_kristen: {
+            title: "Agama Kristen",
+            driveFileId: process.env.DRIVE_ID_AGAMA_KRISTEN || "",
+        },
+        agama_islam: {
+            title: "Agama Islam",
+            driveFileId: process.env.DRIVE_ID_AGAMA_ISLAM || "",
+        },
+        agama_buddha: {
+            title: "Agama Buddha",
+            driveFileId: process.env.DRIVE_ID_AGAMA_BUDDHA || "",
+        },
+        agama_konghucu: {
+            title: "Agama Konghucu",
+            driveFileId: process.env.DRIVE_ID_AGAMA_KONGHUCU || "",
+        },
+        // ---- Kelompok inti ----
+        pancasila: {
+            title: "Pendidikan Pancasila",
+            driveFileId: process.env.DRIVE_ID_PANCASILA || "",
         },
         indonesia: {
             title: "Bahasa Indonesia",
             driveFileId: process.env.DRIVE_ID_INDONESIA || "",
         },
-        matematika: {
-            title: "Matematika",
-            driveFileId: process.env.DRIVE_ID_MATEMATIKA || "",
-        },
         ipa: {
             title: "IPA",
             driveFileId: process.env.DRIVE_ID_IPA || "",
+        },
+        tik: {
+            title: "TIK",
+            driveFileId: process.env.DRIVE_ID_TIK || "",
+        },
+        matematika: {
+            title: "Matematika",
+            driveFileId: process.env.DRIVE_ID_MATEMATIKA || "",
         },
         ips: {
             title: "IPS",
@@ -67,60 +89,34 @@ module.exports = {
             title: "Bahasa Inggris",
             driveFileId: process.env.DRIVE_ID_INGGRIS || "",
         },
-        // ---- Kelompok B ----
         seni: {
             title: "Seni Budaya",
             driveFileId: process.env.DRIVE_ID_SENI || "",
         },
-        pjok: {
-            title: "PJOK",
-            driveFileId: process.env.DRIVE_ID_PJOK || "",
+        // ---- Muatan lokal & khusus SMP THHK ----
+        bahasa_jawa: {
+            title: "Bahasa Jawa",
+            driveFileId: process.env.DRIVE_ID_BAHASA_JAWA || "",
         },
-        prakarya: {
-            title: "Prakarya",
-            driveFileId: process.env.DRIVE_ID_PRAKARYA || "",
+        penjas: {
+            title: "PenJas",
+            driveFileId: process.env.DRIVE_ID_PENJAS || "",
         },
-        informatika: {
-            title: "Informatika",
-            driveFileId: process.env.DRIVE_ID_INFORMATIKA || "",
+        mandarin: {
+            title: "Bahasa Mandarin",
+            driveFileId: process.env.DRIVE_ID_MANDARIN || "",
         },
-        // ---- Muatan Lokal (sesuaikan dengan sekolah) ----
-        mulok_bahasa_daerah: {
-            title: "Muatan Lokal Bahasa Daerah",
-            driveFileId: process.env.DRIVE_ID_MULOK_BAHASA_DAERAH || "",
-        },
-        mulok_bahasa_asing: {
-            title: "Muatan Lokal Bahasa Asing",
-            driveFileId: process.env.DRIVE_ID_MULOK_BAHASA_ASING || "",
-        },
-        // ---- Mapel tambahan (sesuaikan kebutuhan) ----
-        pendalaman_agama: {
-            title: "Pendalaman Agama",
-            driveFileId: process.env.DRIVE_ID_PENDALAMAN_AGAMA || "",
-        },
-        bimbingan_konseling: {
-            title: "Bimbingan Konseling",
+        bk: {
+            title: "BK",
             driveFileId: process.env.DRIVE_ID_BK || "",
         },
-        literasi: {
-            title: "Literasi Digital",
-            driveFileId: process.env.DRIVE_ID_LITERASI || "",
+        native_mandarin: {
+            title: "Native Mandarin",
+            driveFileId: process.env.DRIVE_ID_NATIVE_MANDARIN || "",
         },
-        kewirausahaan: {
-            title: "Kewirausahaan",
-            driveFileId: process.env.DRIVE_ID_KEWIRAUSAHAAN || "",
-        },
-        matematika_tambahan: {
-            title: "Matematika Tambahan",
-            driveFileId: process.env.DRIVE_ID_MATEMATIKA_TAMBAHAN || "",
-        },
-        ipa_tambahan: {
-            title: "IPA Tambahan",
-            driveFileId: process.env.DRIVE_ID_IPA_TAMBAHAN || "",
-        },
-        ips_tambahan: {
-            title: "IPS Tambahan",
-            driveFileId: process.env.DRIVE_ID_IPS_TAMBAHAN || "",
+        coding: {
+            title: "Coding",
+            driveFileId: process.env.DRIVE_ID_CODING || "",
         },
     },
 
