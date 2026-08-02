@@ -1,0 +1,28 @@
+{
+    "name": "portal-sumatif-thhk",
+    "version": "1.0.0",
+    "description": "Portal ujian sumatif aman - SMP Tunas Hidup Harapan Kita (PDF proxy Google Drive, modal validasi wajib, penampil PDF Canvas, live monitor)",
+    "main": "server/index.js",
+    "scripts": {
+        "start": "node server/index.js",
+        "dev": "node server/index.js",
+        "vercel-build": "npm install --production"
+    },
+    "engines": {
+        "node": ">=18"
+    },
+    "keywords": [
+        "ujian",
+        "sumatif",
+        "pdf",
+        "pdfjs",
+        "supabase",
+        "exam-browser"
+    ],
+    "license": "MIT",
+    "dependencies": {
+        "@supabase/supabase-js": "^2.111.0",
+        "express": "^4.19.2",
+        "pdfkit": "^0.15.0"
+    }
+}

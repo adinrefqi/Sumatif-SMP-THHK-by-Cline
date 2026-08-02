@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="theme-color" content="#17375e" />
+    <title>Portal Ujian Sumatif — SMP Tunas Hidup Harapan Kita</title>
+    <link rel="icon" type="image/svg+xml" href="logo.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap"
+        rel="stylesheet" />
+    <link rel="stylesheet" href="css/style.css" />
+</head>
+
+<body>
+    <!-- ===== Dekorasi latar ===== -->
+    <div class="bg-decor" aria-hidden="true">
+        <div class="bg-blob bg-blob-1"></div>
+        <div class="bg-blob bg-blob-2"></div>
+        <div class="bg-grid"></div>
+    </div>
+
+    <!-- ===== Brand kecil pojok ===== -->
+    <header class="topbar-brand">
+        <img src="logo.svg" alt="Logo SMP THHK" class="topbar-logo" />
+        <div class="topbar-text">
+            <strong>SMP Tunas Hidup Harapan Kita</strong>
+            <span>Portal Ujian Sumatif</span>
+        </div>
+    </header>
+
+    <main id="app">
+        <!-- =====================================================
+             LAYAR LOGIN
+        ====================================================== -->
+        <section id="screen-login" class="screen">
+            <div class="auth-wrap">
+                <div class="auth-card">
+                    <div class="auth-brand">
+                        <div class="auth-logo-box">
+                            <img src="logo.svg" alt="Logo SMP Tunas Hidup Harapan Kita" />
+                        </div>
+                        <h1 class="auth-title">Yayasan Tunas Hidup Harapan Kita</h1>
+                        <p class="auth-school">SMP TUNAS HIDUP HARAPAN KITA</p>
+                        <p class="auth-sub">Penilaian Sumatif Akhir Semester — Tahun Pelajaran 2025/2026</p>
+                    </div>
+
+                    <div class="role-switch" role="tablist" aria-label="Pilih peran">
+                        <button type="button" class="role-btn is-active" data-role="siswa" role="tab"
+                            aria-selected="true">
+                            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M22 10 12 5 2 10l10 5 10-5z" />
+                                <path d="M6 12v5c0 1.7 2.7 3 6 3s6-1.3 6-3v-5" />
+                                <path d="M22 10v6" />
+                            </svg>
+                            <span>Login Siswa</span>
+                        </button>
+                        <button type="button" class="role-btn" data-role="pengawas" role="tab" aria-selected="false">
+                            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                                <path d="m9 12 2 2 4-4" />
+                            </svg>
+                            <span>Login Pengawas</span>
+                        </button>
+                    </div>
+
+                    <form id="login-form" class="auth-form" autocomplete="off">
+                        <input type="hidden" id="login-role" value="siswa" />
+                        <div class="field">
+                            <label for="login-username">Nama Pengguna</label>
+                            <div class="input-wrap">
+                                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                                    <circle cx="12" cy="7" r="4" />
+                                </svg>
+                                <input type="text" id="login-username" name="username" placeholder="Contoh: siswa1"
+                                    required />
+                            </div>
+                        </div>
+                        <div class="field">
+                            <label for="login-password">Kata Sandi</label>
+                            <div class="input-wrap">
+                                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="3" y="11" width="18" height="11" rx="2" />
+                                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                                </svg>
+                                <input type="password" id="login-password" name="password" placeholder="••••••••"
+                                    required />
+                                <button type="button" id="toggle-password" class="input-action"
+                                    aria-label="Tampilkan kata sandi">
+                                    <svg id="icon-eye" viewBox="0 0 24 24" width="18" height="18" fill="none"
+                                        stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round">
+                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                                        <circle cx="12" cy="12" r="3" />
+                                    </svg>
+                                    <svg id="icon-eye-off" viewBox="0 0 24 24" width="18" height="18" fill="none"
+                                        stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round" style="display:none">
+                                        <path
+                                            d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                                        <line x1="1" y1="1" x2="23" y2="23" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div id="login-error" class="form-error" role="alert" hidden></div>
+
+                        <button type="submit" id="login-submit" class="btn btn-primary btn-block">
+                            <span class="btn-text">Masuk</span>
+                            <span class="spinner" hidden aria-hidden="true"></span>
+                        </button>
+                    </form>
+
+                    <div class="auth-demo">
+                        <p><strong>Akun demonstrasi</strong></p>
+                        <div class="demo-chips" id="demo-chips">
+                            <button type="button" class="chip" data-u="siswa1" data-p="rahasia123">Siswa · 9A</button>
+                            <button type="button" class="chip" data-u="siswa2" data-p="rahasia123">Siswa · 9A</button>
+                            <button type="button" class="chip" data-u="siswa3" data-p="rahasia123">Siswa · 9B</button>
+                            <button type="button" class="chip" data-u="pengawas" data-p="thhk2026">Pengawas</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- =====================================================
+             DASHBOARD PENGAWAS (LIVE MONITOR)
+        ====================================================== -->
+        <section id="screen-monitor" class="screen screen-monitor" hidden>
+            <div class="monitor-header">
+                <div class="monitor-header-left">
+                    <img src="logo.svg" alt="" class="monitor-logo" />
+                    <div>
+                        <h1>Live Monitor Ujian</h1>
+                        <p id="monitor-who">Pengawas</p>
+                    </div>
+                </div>
+                <div class="monitor-header-right">
+                    <span class="live-pill" id="live-pill"><span class="dot"></span> Real-time</span>
+                    <button type="button" id="refresh-monitor" class="btn btn-ghost btn-sm">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M23 4v6h-6" />
+                            <path d="M1 20v-6h6" />
+                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                        </svg>
+                        Muat Ulang
+                    </button>
+                    <button type="button" id="logout-btn" class="btn btn-outline btn-sm">Keluar</button>
+                </div>
+            </div>
+
+            <div class="monitor-body">
+                <div class="stat-grid" id="stat-grid">
+                    <div class="stat-card">
+                        <span class="stat-icon" style="--c:#2563eb">
+                            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                                <circle cx="9" cy="7" r="4" />
+                                <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+                            </svg>
+                        </span>
+                        <div class="stat-info">
+                            <strong id="stat-siswa-login">0</strong>
+                            <span>Siswa Presensi</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-icon" style="--c:#059669">
+                            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10" />
+                                <path d="M12 6v6l4 2" />
+                            </svg>
+                        </span>
+                        <div class="stat-info">
+                            <strong id="stat-siswa-aktif">0</strong>
+                            <span>Siswa Aktif</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-icon" style="--c:#d97706">
+                            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10" />
+                                <path d="M12 16v-4M12 8h.01" />
+                            </svg>
+                        </span>
+                        <div class="stat-info">
+                            <strong id="stat-token">0</strong>
+                            <span>Token Aktif</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-icon" style="--c:#dc2626">
+                            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+                            </svg>
+                        </span>
+                        <div class="stat-info">
+                            <strong id="stat-kejadian">0</strong>
+                            <span>Peristiwa</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="monitor-grid">
+                    <!-- Tabel siswa aktif -->
+                    <div class="panel">
+                        <div class="panel-head">
+                            <h2>Siswa Aktif</h2>
+                            <span class="panel-badge" id="badge-siswa-aktif">0</span>
+                        </div>
+                        <div class="table-wrap">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Siswa</th>
+                                        <th>Kelas</th>
+                                        <th>Mapel</th>
+                                        <th>Presensi</th>
+                                        <th>Status</th>
+                                        <th>Terakhir</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="monitor-siswa-body">
+                                    <tr class="empty-row">
+                                        <td colspan="6">Belum ada siswa yang masuk.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Riwayat kejadian -->
+                    <div class="panel">
+                        <div class="panel-head">
+                            <h2>Riwayat Aktivitas</h2>
+                            <span class="panel-badge" id="badge-kejadian">0</span>
+                        </div>
+                        <div class="log-list" id="monitor-log">
+                            <div class="log-empty">Belum ada aktivitas.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Kelola token ujian (pengawas) -->
+                <div class="panel">
+                    <div class="panel-head">
+                        <h2>Kelola Token Ujian</h2>
+                        <span class="panel-badge" id="badge-token">0</span>
+                    </div>
+                    <div class="token-manager">
+                        <form id="token-create-form" class="token-create-form" autocomplete="off">
+                            <div class="field">
+                                <label for="token-create-exam">Mata Pelajaran <span class="req">*</span></label>
+                                <div class="input-wrap">
+                                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
+                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                                        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+                                    </svg>
+                                    <select id="token-create-exam" required>
+                                        <option value="">— Pilih Mapel —</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="field token-create-label-field">
+                                <label for="token-create-label">Label / Ruang (opsional)</label>
+                                <div class="input-wrap">
+                                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
+                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6" />
+                                        <path d="M9 9h.01M15 9h.01" />
+                                    </svg>
+                                    <input type="text" id="token-create-label" placeholder="contoh: Ruang 9A"
+                                        autocomplete="off" />
+                                </div>
+                            </div>
+                            <button type="submit" id="token-create-submit" class="btn btn-primary">
+                                <span class="btn-text">Buat Token</span>
+                                <span class="spinner" hidden aria-hidden="true"></span>
+                            </button>
+                        </form>
+                        <div id="token-create-error" class="form-error" role="alert" hidden></div>
+                        <div id="token-list" class="token-list">
+                            <div class="log-empty">Belum ada token. Buat token di atas.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-head">
+                        <h2>Berita Acara Pelaksanaan</h2>
+                        <span class="panel-badge" id="badge-ba">0</span>
+                    </div>
+                    <div class="table-wrap">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Waktu Submit</th>
+                                    <th>Pengawas</th>
+                                    <th>Ruang</th>
+                                    <th>Tanggal</th>
+                                    <th>Pukul</th>
+                                    <th>Pengawas / Peserta</th>
+                                    <th>Kejadian</th>
+                                    <th>Catatan</th>
+                                </tr>
+                            </thead>
+                            <tbody id="monitor-ba-body">
+                                <tr class="empty-row">
+                                    <td colspan="8">Belum ada Berita Acara yang disubmit.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- =====================================================
+             DASHBOARD SISWA (mengarah ke token gate & viewer)
+        ====================================================== -->
+        <section id="screen-student" class="screen" hidden>
+            <div class="student-shell">
+                <div class="student-head" id="student-head"></div>
+                <div class="student-body" id="student-body"></div>
+            </div>
+        </section>
+    </main>
+
+    <!-- ===== Template bagian siswa (dipindah ke #student-body) ===== -->
+    <template id="tpl-student-head">
+        <div class="student-head-left">
+            <img src="logo.svg" alt="" class="student-logo" />
+            <div>
+                <h1>Ujian Sumatif</h1>
+                <p id="stud-subtitle">SMP Tunas Hidup Harapan Kita</p>
+            </div>
+        </div>
+        <div class="student-head-right">
+            <div class="student-id">
+                <strong id="stud-name">—</strong>
+                <span id="stud-meta">—</span>
+            </div>
+            <button type="button" id="logout-btn-student" class="btn btn-outline btn-sm">Keluar</button>
+        </div>
+        <button type="button" class="logout-fab" id="logout-fab" aria-label="Keluar">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <polyline points="16 17 21 12 16 7" />
+                <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+        </button>
+    </template>
+
+    <!-- Gerbang token -->
+    <template id="tpl-token-gate">
+        <div class="gate-card">
+            <div class="gate-icon">
+                <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="1.8"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="11" width="18" height="11" rx="2" />
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                </svg>
+            </div>
+            <h2>Masukkan Token Ujian</h2>
+            <p class="gate-desc">
+                Token diberikan oleh pengawas di ruang ujian Anda.
+                Setelah token valid, soal akan terbuka secara otomatis.
+            </p>
+            <form id="token-form" class="token-form" autocomplete="off">
+                <div class="input-wrap token-input-wrap">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="11" width="18" height="11" rx="2" />
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                    </svg>
+                    <input type="text" id="token-input" placeholder="contoh: TOKEN9A" autocomplete="off"
+                        autocapitalize="characters" spellcheck="false" required />
+                </div>
+                <div id="token-error" class="form-error" role="alert" hidden></div>
+                <button type="submit" id="token-submit" class="btn btn-primary btn-block">
+                    <span class="btn-text">Validasi Token</span>
+                    <span class="spinner" hidden aria-hidden="true"></span>
+                </button>
+            </form>
+            <p class="gate-hint">Mintalah bantuan pengawas jika Anda tidak memiliki token.</p>
+        </div>
+    </template>
+
+    <!-- Ruang tunggu (presensi belum) — tombol pemanggil modal -->
+    <template id="tpl-attendance-needed">
+        <div class="gate-card">
+            <div class="gate-icon gate-icon-warn">
+                <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="1.8"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 9v4M12 17h.01" />
+                    <path
+                        d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                </svg>
+            </div>
+            <h2>Selesaikan Presensi Dulu</h2>
+            <p class="gate-desc">Anda harus mengonfirmasi kehadiran sebelum dapat memasukkan token ujian.</p>
+            <button type="button" id="open-presensi-btn" class="btn btn-primary btn-block">Buka Form Presensi</button>
+        </div>
+    </template>
+
+    <!-- ===== MODAL WAJIB: PRESENSI (SISWA) ===== -->
+    <div id="modal-presensi" class="modal modal-block" hidden role="dialog" aria-modal="true"
+        aria-labelledby="presensi-title">
+        <div class="modal-overlay"></div>
+        <div class="modal-card">
+            <div class="modal-head">
+                <img src="logo.svg" alt="" class="modal-logo" />
+                <h2 id="presensi-title">Presensi Peserta Ujian</h2>
+                <p>SMP Tunas Hidup Harapan Kita — Penilaian Sumatif</p>
+            </div>
+            <div class="modal-body">
+                <div class="modal-info-row">
+                    <div class="info-cell">
+                        <span>Nama</span>
+                        <strong id="presensi-name">—</strong>
+                    </div>
+                    <div class="info-cell">
+                        <span>Kelas</span>
+                        <strong id="presensi-class">—</strong>
+                    </div>
+                    <div class="info-cell">
+                        <span>Mapel</span>
+                        <strong id="presensi-exam">—</strong>
+                    </div>
+                </div>
+                <form id="presensi-form">
+                    <div class="field">
+                        <label for="presensi-room">Ruang Ujian <span class="req">*</span></label>
+                        <div class="input-wrap">
+                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6" />
+                                <path d="M9 9h.01M15 9h.01" />
+                            </svg>
+                            <input type="text" id="presensi-room" placeholder="contoh: Ruang 9A" autocomplete="off"
+                                required />
+                        </div>
+                    </div>
+                    <div class="presensi-check">
+                        <label class="check">
+                            <input type="checkbox" id="presensi-confirm" required />
+                            <span class="checkmark"></span>
+                            <span>
+                                Saya <strong id="presensi-name-2">—</strong> menyatakan
+                                <strong>HADIR</strong> dan siap mengikuti Penilaian Sumatif dengan jujur.
+                            </span>
+                        </label>
+                    </div>
+                    <div id="presensi-error" class="form-error" role="alert" hidden></div>
+                    <button type="submit" id="presensi-submit" class="btn btn-primary btn-block">
+                        <span class="btn-text">Konfirmasi Kehadiran</span>
+                        <span class="spinner" hidden aria-hidden="true"></span>
+                    </button>
+                </form>
+                <p class="modal-note">Form ini wajib diisi. Anda tidak dapat melanjutkan sebelum konfirmasi dikirim.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== MODAL WAJIB: BERITA ACARA (PENGAWAS) ===== -->
+    <div id="modal-berita-acara" class="modal modal-block" hidden role="dialog" aria-modal="true"
+        aria-labelledby="ba-title">
+        <div class="modal-overlay"></div>
+        <div class="modal-card modal-card-wide">
+            <div class="modal-head">
+                <img src="logo.svg" alt="" class="modal-logo" />
+                <h2 id="ba-title">Berita Acara Pelaksanaan Sumatif</h2>
+                <p>SMP Tunas Hidup Harapan Kita — Wajib diisi sebelum Live Monitor terbuka</p>
+            </div>
+            <div class="modal-body">
+                <form id="ba-form">
+                    <div class="form-grid">
+                        <div class="field">
+                            <label for="ba-room">Ruang Ujian <span class="req">*</span></label>
+                            <div class="input-wrap">
+                                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6" />
+                                </svg>
+                                <input type="text" id="ba-room" placeholder="contoh: Ruang 9A" required />
+                            </div>
+                        </div>
+                        <div class="field">
+                            <label for="ba-date">Tanggal Ujian <span class="req">*</span></label>
+                            <div class="input-wrap">
+                                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="3" y="4" width="18" height="18" rx="2" />
+                                    <line x1="16" y1="2" x2="16" y2="6" />
+                                    <line x1="8" y1="2" x2="8" y2="6" />
+                                    <line x1="3" y1="10" x2="21" y2="10" />
+                                </svg>
+                                <input type="date" id="ba-date" required />
+                            </div>
+                        </div>
+                        <div class="field">
+                            <label for="ba-time">Waktu Ujian <span class="req">*</span></label>
+                            <div class="input-wrap">
+                                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="10" />
+                                    <polyline points="12 6 12 12 16 14" />
+                                </svg>
+                                <input type="time" id="ba-time" required />
+                            </div>
+                        </div>
+                        <div class="field">
+                            <label for="ba-supervisor-count">Jumlah Pengawas <span class="req">*</span></label>
+                            <div class="input-wrap">
+                                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                                    <circle cx="9" cy="7" r="4" />
+                                    <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+                                </svg>
+                                <input type="number" id="ba-supervisor-count" min="1" placeholder="2" required />
+                            </div>
+                        </div>
+                        <div class="field">
+                            <label for="ba-student-count">Jumlah Peserta <span class="req">*</span></label>
+                            <div class="input-wrap">
+                                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                                    <circle cx="9" cy="7" r="4" />
+                                    <path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+                                </svg>
+                                <input type="number" id="ba-student-count" min="1" placeholder="30" required />
+                            </div>
+                        </div>
+                        <div class="field">
+                            <label for="ba-incidents">Kejadian/Khusus <span class="req">*</span></label>
+                            <div class="input-wrap">
+                                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M12 9v4M12 17h.01" />
+                                    <path
+                                        d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                                </svg>
+                                <select id="ba-incidents" required>
+                                    <option value="">— Pilih —</option>
+                                    <option value="Tidak ada kejadian khusus">Tidak ada kejadian khusus</option>
+                                    <option value="Terlambat">Ada peserta terlambat</option>
+                                    <option value="Sakit">Ada peserta sakit/seizin</option>
+                                    <option value="Gangguan teknis">Gangguan teknis</option>
+                                    <option value="Kecurangan">Terjadi dugaan kecurangan</option>
+                                    <option value="Lainnya">Lainnya</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="field field-full">
+                            <label for="ba-notes">Catatan Tambahan</label>
+                            <textarea id="ba-notes" rows="3" placeholder="Tulis catatan jika ada..."></textarea>
+                        </div>
+                    </div>
+                    <div id="ba-error" class="form-error" role="alert" hidden></div>
+                    <div class="ba-confirm">
+                        <label class="check">
+                            <input type="checkbox" id="ba-confirm" required />
+                            <span class="checkmark"></span>
+                            <span>
+                                Saya <strong id="ba-name">—</strong> menyatakan bahwa isi Berita Acara ini
+                                <strong>benar dan dapat dipertanggungjawabkan</strong>.
+                            </span>
+                        </label>
+                    </div>
+                    <button type="submit" id="ba-submit" class="btn btn-primary btn-block">
+                        <span class="btn-text">Submit Berita Acara</span>
+                        <span class="spinner" hidden aria-hidden="true"></span>
+                    </button>
+                </form>
+                <p class="modal-note">Form ini wajib diisi. Anda tidak dapat membuka Live Monitor sebelum Berita Acara
+                    disubmit.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== MODAL KONFIRMASI SELESAI / KELUAR ===== -->
+    <div id="modal-finish" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="finish-title">
+        <div class="modal-overlay"></div>
+        <div class="modal-card modal-sm">
+            <div class="modal-body text-center">
+                <div class="finish-icon">
+                    <svg viewBox="0 0 24 24" width="38" height="38" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                        <polyline points="22 4 12 14.01 9 11.01" />
+                    </svg>
+                </div>
+                <h2 id="finish-title">Selesaikan Ujian?</h2>
+                <p id="finish-desc">
+                    Setelah menekan Selesai, sesi ujian Anda akan ditutup dan
+                    tidak dapat dibuka kembali. Pastikan Anda telah selesai mengerjakan.
+                </p>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-ghost" id="finish-cancel">Batal</button>
+                    <button type="button" class="btn btn-danger" id="finish-confirm">
+                        <span class="btn-text">Ya, Selesaikan</span>
+                        <span class="spinner" hidden aria-hidden="true"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== TOAST ===== -->
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+    <!-- PDF.js (secure viewer) -->
+    <script type="module" src="js/app.js"></script>
+</body>
+
+</html>
