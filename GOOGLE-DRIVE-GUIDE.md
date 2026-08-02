@@ -10,9 +10,28 @@ Panduan lengkap menautkan PDF soal dari Google Drive ke aplikasi, per mata pelaj
 |---------|-------------------|---------|
 | **1** | Upload PDF ke Google Drive & jadikan publik | drive.google.com |
 | **2** | Salin **File ID** dari link | Google Drive |
-| **3** | Tempel File ID ke tabel `exams` | Supabase Dashboard |
+| **3** | Tempel File ID ke tabel `exams` (per mapel + per kelas) | Supabase Dashboard |
 
 > ✅ **Cara ini TANPA edit kode & TANPA redeploy** — cukup isi tabel, PDF langsung muncul.
+
+---
+
+## 🏫 KONSEP PENTING: 1 Mapel bisa punya PDF Berbeda per Kelas
+
+Sistem mendukung **1 mapel dengan PDF berbeda untuk Kelas 7, 8, dan 9**:
+
+| Mapel | Kolom `class_name` di Supabase | PDF yang dipakai |
+|-------|-------------------------------|------------------|
+| Matematika | `7` | Soal Matematika Kelas 7 |
+| Matematika | `8` | Soal Matematika Kelas 8 |
+| Matematika | `9` | Soal Matematika Kelas 9 |
+| Matematika | *(kosong)* | PDF default (fallback bila level tidak diisi) |
+
+**Cara kerja otomatisnya:**
+- Siswa login → sistem tahu kelasnya (contoh: `calvin` = **9A**)
+- Siswa membuka mapel `matematika` → server mencari File ID dengan `class_name = '9'`
+- Jika ada → kirim PDF Matematika Kelas 9
+- Jika **tidak ada** → pakai baris `class_name = ''` (default) → jika kosong juga → PDF demo
 
 ---
 

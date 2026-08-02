@@ -83,7 +83,8 @@ class MemoryStore {
     }
 
     /* ---------------- Mapel / PDF ---------------- */
-    async getExamDriveFileId(examKey) {
+    async getExamDriveFileId(examKey, className) {
+        // Mode demo: pakai env var config (tidak ada data per kelas)
         const f = config.examFiles[examKey];
         return f ? f.driveFileId || "" : "";
     }
@@ -416,17 +417,39 @@ class SupabaseStore {
 
     /* ---------------- Mapel / PDF ---------------- */
     /* Mengambil Google Drive File ID untuk mapel tertentu.
-     * Prioritas: tabel `exams` di Supabase > env var di config.
+     * Mendukung PDF yang BERBEDA per kelas (7, 8, 9):
+     *   1) Cari baris dengan class_name = level kelas siswa (misal "7")
+     *   2) Jika tidak ada, fallback ke class_name = '' (default)
+     *   3) Terakhir, fallback ke env var config.
      * Tabel `exams` diisi lewat Supabase Dashboard (Table Editor)
      * sehingga tidak perlu edit kode/redeploy saat mengganti PDF. */
-    async getExamDriveFileId(examKey) {
+    async getExamDriveFileId(examKey, className) {
         const f = config.examFiles[examKey];
         const fallback = f ? f.driveFileId || "" : "";
+
+        // Ambil level kelas dari className: "7A" -> "7", "8B" -> "8", dst.
+        const level = String(className || "").replace(/\D/g, "").slice(0, 1);
+
         try {
+            // 1) Cari File ID spesifik per kelas (class_name = level)
+            if (level) {
+                const { data: levelData, error: levelError } = await this.client
+                    .from(this.tables.exams)
+                    .select("drive_file_id")
+                    .eq("exam_key", examKey)
+                    .eq("class_name", level)
+                    .maybeSingle();
+                if (!levelError && levelData && levelData.drive_file_id) {
+                    return levelData.drive_file_id;
+                }
+            }
+
+            // 2) Fallback: File ID default (class_name = '')
             const { data, error } = await this.client
                 .from(this.tables.exams)
                 .select("drive_file_id")
                 .eq("exam_key", examKey)
+                .eq("class_name", "")
                 .maybeSingle();
             if (!error && data && data.drive_file_id) {
                 return data.drive_file_id;
