@@ -465,6 +465,79 @@ module.exports = {
             className: "8B",
             exam: "indonesia",
         },
+
+        // ---------- SISWA KELAS 7 SMP THHK (10 siswa) ----------
+        // Password default semua siswa: thhk2026
+        {
+            username: "aerilyn",
+            password: "thhk2026",
+            name: "Aerilyn Felycia Natania Andrian",
+            className: "7A",
+            exam: "indonesia",
+        },
+        {
+            username: "amon",
+            password: "thhk2026",
+            name: "Amon Micha Wiyanto",
+            className: "7A",
+            exam: "indonesia",
+        },
+        {
+            username: "gabriela",
+            password: "thhk2026",
+            name: "Gabriela Princessha Christabele",
+            className: "7A",
+            exam: "indonesia",
+        },
+        {
+            username: "griselda",
+            password: "thhk2026",
+            name: "Griselda Aurelia",
+            className: "7A",
+            exam: "indonesia",
+        },
+        {
+            username: "jadden",
+            password: "thhk2026",
+            name: "Jadden Nathanael Kang",
+            className: "7A",
+            exam: "indonesia",
+        },
+        {
+            username: "king",
+            password: "thhk2026",
+            name: "King Joshua Salim",
+            className: "7A",
+            exam: "indonesia",
+        },
+        {
+            username: "lionel",
+            password: "thhk2026",
+            name: "Lionel Melvin",
+            className: "7A",
+            exam: "indonesia",
+        },
+        {
+            username: "mutiara",
+            password: "thhk2026",
+            name: "Mutiara Angelina",
+            className: "7A",
+            exam: "indonesia",
+        },
+        {
+            username: "sendi",
+            password: "thhk2026",
+            name: "Sendi Kurniawan",
+            className: "7A",
+            exam: "indonesia",
+        },
+        {
+            username: "velove",
+            password: "thhk2026",
+            name: "Velove Chloe Himawan",
+            className: "7A",
+            exam: "indonesia",
+        },
     ],
 
     // ============ TOKEN UJIAN ============

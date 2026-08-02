@@ -85,7 +85,24 @@ Password semua siswa: **`thhk2026`** (username = nama depan tanpa spasi).
 | 13 | `nicholas` | Nicholas Willson Kasuya | 8B |
 | 14 | `vincentius` | Vincentius Fernandez Suharto | 8B |
 
-> **Catatan:** Semua siswa Kelas 8 & 9 diset memakai mapel `indonesia` (Bahasa Indonesia) untuk saat ini. Ubah kolom `exam` di `server/config.js` sesuai jadwal ujian masing-masing mapel.
+### Akun Siswa Kelas 7 SMP THHK (10 siswa)
+
+Password semua siswa: **`thhk2026`** (username = nama depan tanpa spasi).
+
+| No | Username | Nama | Kelas |
+|----|----------|------|-------|
+| 1 | `aerilyn` | Aerilyn Felycia Natania Andrian | 7A |
+| 2 | `amon` | Amon Micha Wiyanto | 7A |
+| 3 | `gabriela` | Gabriela Princessha Christabele | 7A |
+| 4 | `griselda` | Griselda Aurelia | 7A |
+| 5 | `jadden` | Jadden Nathanael Kang | 7A |
+| 6 | `king` | King Joshua Salim | 7A |
+| 7 | `lionel` | Lionel Melvin | 7A |
+| 8 | `mutiara` | Mutiara Angelina | 7A |
+| 9 | `sendi` | Sendi Kurniawan | 7A |
+| 10 | `velove` | Velove Chloe Himawan | 7A |
+
+> **Catatan:** Semua siswa Kelas 7, 8 & 9 diset memakai mapel `indonesia` (Bahasa Indonesia) untuk saat ini. Ubah kolom `exam` di `server/config.js` sesuai jadwal ujian masing-masing mapel.
 
 ### Token ujian demo
 
