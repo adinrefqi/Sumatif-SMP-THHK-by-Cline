@@ -130,13 +130,57 @@ module.exports = {
         },
     },
 
-    // ============ OTAK/ADMIN & PENGAWAS ============
-    // Kredensial login pengawas (demonstrasi).
+    // ============ PENGAWAS (8 guru SMP THHK) ============
+    // Kredensial login pengawas.
+    // username = nama depan lowercase (tanpa gelar)
+    // password = kata sandi default: thhk2026
     supervisorCredentials: [
         {
-            username: "pengawas",
+            username: "adin",
             password: "thhk2026",
-            name: "Pak Budi Santoso",
+            name: "Adin Refqi L., S.Pd.I., M.Pd.",
+            role: "Pengawas",
+        },
+        {
+            username: "sunedi",
+            password: "thhk2026",
+            name: "Sunedi Trihatmojo, S.Pd., M.Pd.",
+            role: "Pengawas",
+        },
+        {
+            username: "faizal",
+            password: "thhk2026",
+            name: "Muchamad Faizal Umar, S.Pd.",
+            role: "Pengawas",
+        },
+        {
+            username: "atmo",
+            password: "thhk2026",
+            name: "Atmo Kusumo, S.Pd.",
+            role: "Pengawas",
+        },
+        {
+            username: "thevea",
+            password: "thhk2026",
+            name: "Thevea Yurike R., S.Pd.",
+            role: "Pengawas",
+        },
+        {
+            username: "widaningsih",
+            password: "thhk2026",
+            name: "Widaningsih, S.Pd.",
+            role: "Pengawas",
+        },
+        {
+            username: "dyfa",
+            password: "thhk2026",
+            name: "Dyfa Erwinsyah Putra, S.Pd.",
+            role: "Pengawas",
+        },
+        {
+            username: "morys",
+            password: "thhk2026",
+            name: "Morys Murti Kenti, S.Pd.",
             role: "Pengawas",
         },
     ],

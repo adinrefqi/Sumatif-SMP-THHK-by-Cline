@@ -25,10 +25,24 @@ Buka **http://localhost:3000**
 
 | Peran | Username | Password | Keterangan |
 |-------|----------|----------|------------|
-| Pengawas | `pengawas` | `thhk2026` | Memunculkan modal **Berita Acara** wajib |
 | Siswa | `siswa1` | `rahasia123` | Kelas 9A — Bahasa Indonesia (demo) |
 | Siswa | `siswa2` | `rahasia123` | Kelas 9A — Matematika (demo) |
 | Siswa | `siswa3` | `rahasia123` | Kelas 9B — IPA (demo) |
+
+### Akun Pengawas SMP THHK (8 guru)
+
+Password semua pengawas: **`thhk2026`** (username = nama depan tanpa gelar).
+
+| No | Username | Nama |
+|----|----------|------|
+| 1 | `adin` | Adin Refqi L., S.Pd.I., M.Pd. |
+| 2 | `sunedi` | Sunedi Trihatmojo, S.Pd., M.Pd. |
+| 3 | `faizal` | Muchamad Faizal Umar, S.Pd. |
+| 4 | `atmo` | Atmo Kusumo, S.Pd. |
+| 5 | `thevea` | Thevea Yurike R., S.Pd. |
+| 6 | `widaningsih` | Widaningsih, S.Pd. |
+| 7 | `dyfa` | Dyfa Erwinsyah Putra, S.Pd. |
+| 8 | `morys` | Morys Murti Kenti, S.Pd. |
 
 ### Akun Siswa Kelas 9 SMP THHK (27 siswa)
 
