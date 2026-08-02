@@ -47,10 +47,10 @@ function clearSessionCookie(res) {
     res.setHeader("Set-Cookie", `${COOKIE_NAME}=; HttpOnly; Path=/; SameSite=Strict; Max-Age=0`);
 }
 
-async function requireSession(role) {
-    // Catatan: ginjal sesi di Supabase disimpan di tabel `users`.
+function requireSession(role) {
+    // Catatan: sesi di Supabase disimpan di tabel `users`.
     // Di Vercel serverless, instance bisa berganti kapan saja, jadi
-    // kita selalu validasi token ke database bila tidak ada di memory.
+    // kita validasi token ke database bila tidak ada di memory.
     return async (req, res, next) => {
         try {
             const token = parseCookies(req)[COOKIE_NAME];
