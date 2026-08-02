@@ -75,6 +75,13 @@ class MemoryStore {
         this.sessions.delete(token);
     }
 
+    /* Mode demo: state hanya tersimpan di memory, tidak perlu persist */
+    updateSessionState(token, state) {
+        const session = this.sessions.get(token);
+        if (!session) return;
+        Object.assign(session, state);
+    }
+
     /* ---------------- Presensi (siswa) ---------------- */
     addAttendance({ sessionId, name, className, examKey, examTitle, room }) {
         const record = {
@@ -300,7 +307,6 @@ class SupabaseStore {
     /* ---------------- Sesi ---------------- */
     async createSession({ username, name, role, className, exam }) {
         const token = crypto.randomBytes(32).toString("hex");
-        const sessionId = generateId("ses");
 
         const payload = {
             username,
@@ -319,9 +325,10 @@ class SupabaseStore {
             .single();
         if (error) throw error;
 
-        // Bentuk sesi in-memory agar kompatibel dengan seluruh handler
+        // Bentuk sesi in-memory agar kompatibel dengan seluruh handler.
+        // id = UUID dari baris tabel users, konsisten dengan getSession().
         const session = {
-            id: sessionId,
+            id: data.id,
             token: data.token,
             username: data.username,
             name: data.name,
@@ -334,9 +341,63 @@ class SupabaseStore {
         return session;
     }
 
-    getSession(token) {
+    async getSession(token) {
         if (!token) return null;
-        return this.memory.getSession(token);
+
+        // Cek cache in-memory dulu
+        const cached = this.memory.getSession(token);
+        if (cached) return cached;
+
+        // Untuk serverless (Vercel), instance bisa berganti kapan saja.
+        // Jika tidak ada di memory, validasi token ke tabel `users` di Supabase.
+        const { data, error } = await this.client
+            .from(this.tables.users)
+            .select("*")
+            .eq("token", token)
+            .eq("active", true)
+            .maybeSingle();
+        if (error) throw error;
+        if (!data) return null;
+
+        // Rekonstruksi sesi dari database
+        const session = {
+            id: data.id,
+            token: data.token,
+            username: data.username,
+            name: data.name,
+            role: data.role,
+            className: data.class_name,
+            exam: data.exam,
+            attendanceDone: data.attendance_done || false,
+            beritaAcaraDone: data.berita_acara_done || false,
+            tokenValid: data.token_valid || false,
+            examKey: data.exam_key || null,
+            tokenLabel: data.token_label || null,
+            createdAt: data.created_at || nowISO(),
+        };
+        this.memory.sessions.set(session.token, session);
+        return session;
+    }
+
+    /* Persist state alur ujian ke tabel users agar tahan cold start serverless */
+    async updateSessionState(token, state) {
+        const patch = {};
+        if (state.attendanceDone !== undefined) patch.attendance_done = state.attendanceDone;
+        if (state.beritaAcaraDone !== undefined) patch.berita_acara_done = state.beritaAcaraDone;
+        if (state.tokenValid !== undefined) patch.token_valid = state.tokenValid;
+        if (state.examKey !== undefined) patch.exam_key = state.examKey;
+        if (state.tokenLabel !== undefined) patch.token_label = state.tokenLabel;
+
+        if (Object.keys(patch).length === 0) return;
+
+        const { error } = await this.client
+            .from(this.tables.users)
+            .update(patch)
+            .eq("token", token);
+        if (error) throw error;
+
+        // Sinkronkan juga cache in-memory
+        this.memory.updateSessionState(token, state);
     }
 
     async destroySession(token) {

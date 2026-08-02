@@ -13,8 +13,21 @@ CREATE TABLE IF NOT EXISTS public.users (
     exam TEXT,
     token TEXT UNIQUE NOT NULL,
     active BOOLEAN DEFAULT TRUE,
+    -- State alur ujian (persisten agar tahan terhadap cold start serverless)
+    attendance_done BOOLEAN DEFAULT FALSE,
+    berita_acara_done BOOLEAN DEFAULT FALSE,
+    token_valid BOOLEAN DEFAULT FALSE,
+    exam_key TEXT,
+    token_label TEXT,
     created_at TIMESTAMPTZ DEFAULT now()
 );
+
+-- Jika tabel users sudah ada (dari skema versi lama), tambahkan kolom state baru
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS attendance_done BOOLEAN DEFAULT FALSE;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS berita_acara_done BOOLEAN DEFAULT FALSE;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS token_valid BOOLEAN DEFAULT FALSE;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS exam_key TEXT;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS token_label TEXT;
 
 -- ============ TABEL: exam_tokens (token ujian) ============
 CREATE TABLE IF NOT EXISTS public.exam_tokens (

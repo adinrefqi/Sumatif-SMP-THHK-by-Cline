@@ -20,15 +20,16 @@ module.exports = {
     examFiles: {
         indonesia: {
             title: "Bahasa Indonesia",
-            driveFileId: process.env.DRIVE_ID_INDONESIA || "1Q8mQbQkG8dRzTvUwXyZa3bC4dE5fG6hI7jK8lM9nO",
+            // Kosongkan jika belum ada berkas asli; server akan memakai PDF demo.
+            driveFileId: process.env.DRIVE_ID_INDONESIA || "",
         },
         matematika: {
             title: "Matematika",
-            driveFileId: process.env.DRIVE_ID_MATEMATIKA || "1Zm9nO8pQ7rS6tU5vW4xY3zA2bC1dE0fGhIjKlMN2oP",
+            driveFileId: process.env.DRIVE_ID_MATEMATIKA || "",
         },
         ipa: {
             title: "IPA",
-            driveFileId: process.env.DRIVE_ID_IPA || "1Ab2Cd3Ef4Gh5Ij6Kl7Mn8Op9Qr0St1Uv2Wx3Yz4Ab",
+            driveFileId: process.env.DRIVE_ID_IPA || "",
         },
     },
 

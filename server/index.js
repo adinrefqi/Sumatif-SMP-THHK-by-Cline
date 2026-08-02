@@ -47,19 +47,26 @@ function clearSessionCookie(res) {
     res.setHeader("Set-Cookie", `${COOKIE_NAME}=; HttpOnly; Path=/; SameSite=Strict; Max-Age=0`);
 }
 
-function requireSession(role) {
-    return (req, res, next) => {
-        const token = parseCookies(req)[COOKIE_NAME];
-        const session = store.getSession(token);
-        if (!session) {
-            return res.status(401).json({ error: "Sesi tidak valid. Silakan login ulang." });
+async function requireSession(role) {
+    // Catatan: ginjal sesi di Supabase disimpan di tabel `users`.
+    // Di Vercel serverless, instance bisa berganti kapan saja, jadi
+    // kita selalu validasi token ke database bila tidak ada di memory.
+    return async (req, res, next) => {
+        try {
+            const token = parseCookies(req)[COOKIE_NAME];
+            const session = await store.getSession(token);
+            if (!session) {
+                return res.status(401).json({ error: "Sesi tidak valid. Silakan login ulang." });
+            }
+            if (role && session.role !== role) {
+                return res.status(403).json({ error: "Akses ditolak untuk peran ini." });
+            }
+            req.session = session;
+            req.sessionToken = token;
+            next();
+        } catch (e) {
+            return res.status(500).json({ error: "Gagal memvalidasi sesi." });
         }
-        if (role && session.role !== role) {
-            return res.status(403).json({ error: "Akses ditolak untuk peran ini." });
-        }
-        req.session = session;
-        req.sessionToken = token;
-        next();
     };
 }
 
@@ -218,6 +225,11 @@ app.post("/api/presensi", requireSession("siswa"), async (req, res) => {
             room: String(room).trim(),
         });
         req.session.attendanceDone = true;
+        try {
+            await store.updateSessionState(req.sessionToken, { attendanceDone: true });
+        } catch (e) {
+            // abaikan - respons tetap sukses
+        }
         track(req, "presensi", `Presensi dikonfirmasi - Ruang ${room}`);
         return res.json({ ok: true, attendance });
     } catch (e) {
@@ -267,6 +279,11 @@ app.post("/api/berita-acara", requireSession("pengawas"), async (req, res) => {
             notes: notes || "-",
         });
         req.session.beritaAcaraDone = true;
+        try {
+            await store.updateSessionState(req.sessionToken, { beritaAcaraDone: true });
+        } catch (e) {
+            // abaikan - respons tetap sukses
+        }
         track(req, "berita_acara", `Berita Acara disubmit - Ruang ${room}`);
         return res.json({ ok: true, beritaAcara: ba });
     } catch (e) {
@@ -350,6 +367,15 @@ app.post("/api/token", requireSession("siswa"), async (req, res) => {
     req.session.tokenValid = true;
     req.session.examKey = result.examKey;
     req.session.tokenLabel = result.label;
+    try {
+        await store.updateSessionState(req.sessionToken, {
+            tokenValid: true,
+            examKey: result.examKey,
+            tokenLabel: result.label,
+        });
+    } catch (e) {
+        // abaikan - respon tetap sukses
+    }
     track(req, "token_valid", `Token ${result.label} diterima`);
 
     return res.json({
