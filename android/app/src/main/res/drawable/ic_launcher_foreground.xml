@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Buku terbuka sederhana untuk ikon aplikasi -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,38 C49,33 42,30 34,30 C31,30 28,30.5 25,31.5 L25,72 C28,71 31,70.5 34,70.5 C42,70.5 49,73.5 54,78.5 C59,73.5 66,70.5 74,70.5 C77,70.5 80,71 83,72 L83,31.5 C80,30.5 77,30 74,30 C66,30 59,33 54,38 Z" />
+    <!-- Garis tengah buku -->
+    <path
+        android:fillColor="#1B5E20"
+        android:pathData="M54,38 L54,78.5" 
+        android:strokeColor="#1B5E20"
+        android:strokeWidth="2.5" />
+</vector>

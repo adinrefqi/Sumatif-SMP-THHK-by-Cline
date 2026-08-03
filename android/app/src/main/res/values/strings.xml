@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Exambrowser THHK</string>
+    <string name="portal_url">https://portal-sumatif-thhk.vercel.app</string>
+    <string name="accessibility_service_label">Keamanan Ujian Exambrowser THHK</string>
+    <string name="accessibility_service_description">Mencegah siswa keluar dari aplikasi ujian, membuka aplikasi lain, floating window, screenshot, dan aktivitas mencurigakan selama ujian berlangsung.</string>
+    <string name="guard_channel_name">Keamanan Ujian Aktif</string>
+    <string name="guard_channel_desc">Menjaga aplikasi ujian tetap di layar selama ujian berlangsung.</string>
+    <string name="guard_notification_title">Ujian Sumatif THHK Sedang Berlangsung</string>
+    <string name="guard_notification_text">Aplikasi ujian dalam mode terkunci. Jangan keluar dari aplikasi ini.</string>
+    <string name="warning_title">⚠️ Peringatan Keamanan</string>
+    <string name="warning_floating">Anda mencoba membuka aplikasi lain / floating window selama ujian. Tindakan ini dicatat!</string>
+    <string name="warning_exit">Anda mencoba keluar dari aplikasi ujian. Tindakan ini dicatat!</string>
+    <string name="warning_screenshot">Screenshot tidak diizinkan selama ujian!</string>
+    <string name="pin_admin_title">Masukkan PIN Admin</string>
+    <string name="pin_admin_hint">PIN untuk keluar / membuka pengaturan</string>
+    <string name="pin_teacher_title">Masukkan PIN Guru</string>
+    <string name="pin_teacher_hint">PIN untuk menyelesaikan ujian</string>
+    <string name="pin_wrong">PIN salah. Coba lagi.</string>
+    <string name="btn_cancel">Batal</string>
+    <string name="btn_save">Simpan</string>
+    <string name="btn_unlock">Buka Kunci</string>
+    <string name="btn_finish">Selesaikan Ujian</string>
+    <string name="please_wait">Memuat portal ujian…</string>
+    <string name="no_internet">Tidak ada koneksi internet. Periksa koneksi Anda.</string>
+    <string name="ssl_error">Koneksi tidak aman. Hubungi pengawas.</string>
+</resources>

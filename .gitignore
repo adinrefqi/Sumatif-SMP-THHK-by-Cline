@@ -22,3 +22,27 @@ Thumbs.db
 
 # Vercel
 .vercel
+
+# ===== Android =====
+# Build artifacts & caches
+android/.gradle/
+android/build/
+android/app/build/
+android/app/release/
+android/captures/
+
+# Local configuration (SDK path per-user)
+android/local.properties
+android/.idea/
+android/*.iml
+
+# Signing keystore (JANGAN pernah di-commit!)
+*.jks
+*.keystore
+android/app/*.jks
+android/app/*.keystore
+android/app/key.properties
+
+# Output APK (buat ulang saat build)
+*.apk
+*.aab
