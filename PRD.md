@@ -84,7 +84,7 @@
 
 ---
 
-## 6. Rencana Aplikasi Android (BELUM DIKERJAKAN)
+## 6. Rencana Aplikasi Android (✅ SEDANG DIKERJAKAN)
 
 ### Tujuan
 Membuat **APK Android kustom "Exambrowser THHK"** (WebView kiosk) untuk 70 HP pribadi siswa, dengan keamanan menyerupai RDEV Exambrowser (https://r-developer.my.id/fitur-aplikasi/).
@@ -124,19 +124,28 @@ Membuat **APK Android kustom "Exambrowser THHK"** (WebView kiosk) untuk 70 HP pr
 | Komponen | Status |
 |----------|--------|
 | Java 17 (OpenJDK) | ✅ Terpasang |
-| Gradle | ❌ Belum (akan pakai Gradle Wrapper) |
-| Android SDK | ⚠️ **Perlu setup** (download ~2-3 GB commandline-tools + platform + build-tools) |
-| Android Studio | Belum dicek — kemungkinan perlu install |
+| Gradle Wrapper 8.9 | ✅ Terpasang (`gradlew.bat`) |
+| Android SDK (platform 35) | ✅ Terpasang |
+| Build APK Debug | ✅ **Berhasil** (`app-debug.apk` 5.98 MB) |
+| Build APK Release signed | ⏳ Belum (perlu keystore) |
+
+### Progres implementasi (commit `94c263f`)
+- ✅ `MainActivity` WebView kiosk + `FLAG_SECURE` + immersive fullscreen
+- ✅ `AccessibilityService` 3 lapis anti floating apps + anti keluar
+- ✅ `ExamGuardService` foreground penjaga ujian
+- ✅ Back block → PIN admin/guru (SHA-256 hash)
+- ✅ Blokir upload/file chooser/unduhan/copy-paste
+- ✅ Deteksi root/emulator + blokir domain keluar portal
+- ✅ Track event pelanggaran ke Live Monitor via `/api/track`
+- ✅ Gradle Wrapper 8.9 + fix error kompilasi `SecurityUtils`
+- ✅ `.gitignore` Android (build artifacts, keystore, local.properties)
 
 ### Langkah selanjutnya (saat lanjut di ACT MODE)
-1. Setup Android SDK + Gradle Wrapper
-2. Scaffold project Android Kotlin (`build.gradle.kts`, minSdk 24)
-3. Implementasi `MainActivity` + `FLAG_SECURE` + immersive
-4. Implementasi `AccessibilityService` (anti floating apps + anti keluar)
-5. Implementasi back block + PIN admin + alarm
-6. Implementasi deteksi root/emulator + blokir domain + anti copy
-7. Build APK release signed
-8. Dokumentasi setup 70 HP (izin aksesibilitas + pinning + instal APK)
+1. Buat keystore signing (`keytool`) + `build.gradle.kts` signing config
+2. Build APK release signed (`assembleRelease`)
+3. Dokumentasi setup 70 HP (izin aksesibilitas + overlay + instal APK)
+4. Uji di perangkat nyata (Xiaomi/Samsung/OPPO — perbedaan fitur kiosk)
+5. Opsional: QR Code sesi
 
 ---
 
