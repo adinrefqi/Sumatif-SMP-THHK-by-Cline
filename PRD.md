@@ -127,7 +127,9 @@ Membuat **APK Android kustom "Exambrowser THHK"** (WebView kiosk) untuk 70 HP pr
 | Gradle Wrapper 8.9 | ✅ Terpasang (`gradlew.bat`) |
 | Android SDK (platform 35) | ✅ Terpasang |
 | Build APK Debug | ✅ **Berhasil** (`app-debug.apk` 5.98 MB) |
-| Build APK Release signed | ⏳ Belum (perlu keystore) |
+| Build APK Release signed | ✅ **Berhasil** (`app-release.apk` ±1.7 MB, R8 minify, v2 signature) |
+| Keystore signing | ✅ `thhk-release.jks` (alias `thhk`, RSA 2048, valid 10.000 hari) |
+| Dokumentasi setup 70 HP | ✅ `android/SETUP-70-HP.md` |
 
 ### Progres implementasi (commit `94c263f`)
 - ✅ `MainActivity` WebView kiosk + `FLAG_SECURE` + immersive fullscreen
@@ -141,11 +143,12 @@ Membuat **APK Android kustom "Exambrowser THHK"** (WebView kiosk) untuk 70 HP pr
 - ✅ `.gitignore` Android (build artifacts, keystore, local.properties)
 
 ### Langkah selanjutnya (saat lanjut di ACT MODE)
-1. Buat keystore signing (`keytool`) + `build.gradle.kts` signing config
-2. Build APK release signed (`assembleRelease`)
-3. Dokumentasi setup 70 HP (izin aksesibilitas + overlay + instal APK)
+1. ~~Buat keystore signing (`keytool`) + `build.gradle.kts` signing config~~ ✅
+2. ~~Build APK release signed (`assembleRelease`)~~ ✅ (`app-release.apk`)
+3. ~~Dokumentasi setup 70 HP (izin aksesibilitas + overlay + instal APK)~~ ✅ (`SETUP-70-HP.md`)
 4. Uji di perangkat nyata (Xiaomi/Samsung/OPPO — perbedaan fitur kiosk)
-5. Opsional: QR Code sesi
+5. Ganti PIN default (`1234`/`5678`) bila perlu & build ulang
+6. Opsional: QR Code sesi
 
 ---
 

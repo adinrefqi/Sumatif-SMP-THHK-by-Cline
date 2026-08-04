@@ -20,6 +20,11 @@ build/
 .DS_Store
 Thumbs.db
 
+# IDE
+.vscode/
+.idea/
+*.iml
+
 # Vercel
 .vercel
 
