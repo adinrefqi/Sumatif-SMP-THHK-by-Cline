@@ -16,7 +16,7 @@
     --gold-soft: #fdf6e0;
     --ink: #1b2430;
     --muted: #5b6b7f;
-    --line: #e3e8ef;
+    --line: #dbe3ec;
     --bg: #f2f5f9;
     --card: #ffffff;
     --danger: #dc2626;
@@ -66,6 +66,15 @@ textarea {
 
 button {
     cursor: pointer;
+}
+
+button:focus-visible,
+[role="tab"]:focus-visible,
+.chip:focus-visible,
+.token-code:focus-visible,
+.logout-fab:focus-visible {
+    outline: 3px solid var(--gold-light);
+    outline-offset: 3px;
 }
 
 img {
@@ -264,6 +273,10 @@ img {
     outline: none;
     border-color: var(--navy-600);
     box-shadow: 0 0 0 3px rgba(43, 90, 160, 0.12);
+}
+
+.input-wrap:has(.input-action) input {
+    padding-right: 48px;
 }
 
 .input-wrap .input-action {
@@ -748,7 +761,7 @@ textarea:focus {
 .monitor-header {
     background: linear-gradient(135deg, var(--navy-900), var(--navy-800));
     color: #fff;
-    padding: 20px 28px;
+    padding: 20px max(28px, calc((100vw - 1280px) / 2 + 28px));
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -1108,17 +1121,17 @@ textarea:focus {
 
 .badge-success {
     background: var(--success-soft);
-    color: var(--success);
+    color: #047857;
 }
 
 .badge-warn {
     background: var(--warn-soft);
-    color: var(--warn);
+    color: #92400e;
 }
 
 .badge-danger {
     background: var(--danger-soft);
-    color: var(--danger);
+    color: #b91c1c;
 }
 
 .badge-muted {
@@ -1214,8 +1227,8 @@ textarea:focus {
 }
 
 .log-time {
-    font-size: 0.7rem;
-    color: #94a3b8;
+    font-size: 0.72rem;
+    color: var(--muted);
     white-space: nowrap;
     padding-top: 3px;
 }
@@ -1288,8 +1301,17 @@ textarea:focus {
 }
 
 .student-id {
+    min-width: 0;
+    max-width: min(38vw, 320px);
     text-align: right;
     line-height: 1.3;
+}
+
+.student-id strong,
+.student-id span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .student-id strong {
@@ -1433,7 +1455,13 @@ textarea:focus {
 .viewer-controls {
     display: flex;
     align-items: center;
+    justify-content: flex-end;
     gap: 8px;
+    flex-wrap: wrap;
+}
+
+.viewer-controls > * {
+    flex-shrink: 0;
 }
 
 .page-nav {
@@ -1521,6 +1549,14 @@ textarea:focus {
     height: auto;
     display: block;
     border-radius: 4px;
+}
+
+.viewer-window.zoom-large .pdf-canvas-wrap {
+    justify-content: flex-start;
+}
+
+.viewer-window.zoom-large .pdf-canvas-wrap canvas {
+    max-width: none;
 }
 
 .viewer-loader {
@@ -1746,7 +1782,13 @@ textarea:focus {
     }
 
     .viewer-controls {
-        justify-content: space-between;
+        width: 100%;
+        justify-content: center;
+        gap: 6px;
+    }
+
+    .viewer-controls .page-count {
+        min-width: 72px;
     }
 
     .viewer-window {
@@ -1771,6 +1813,21 @@ textarea:focus {
 
     .monitor-header-left {
         flex: 1;
+    }
+
+    .student-id {
+        max-width: 30vw;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+        scroll-behavior: auto !important;
     }
 }
 

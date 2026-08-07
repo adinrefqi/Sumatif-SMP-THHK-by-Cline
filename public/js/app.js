@@ -213,14 +213,57 @@ function showScreen(id) {
 }
 
 /* ---------- Modal ---------- */
+let lastModalFocus = null;
+
 function openModal(id) {
-    show($(id));
+    const modal = $(id);
+    show(modal);
     document.body.style.overflow = "hidden";
+
+    lastModalFocus = document.activeElement;
+
+    // Fokus awal: elemen pertama yang dapat difokus di dalam modal
+    const focusable = modal.querySelector(
+        'button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])'
+    );
+    if (focusable) focusable.focus();
+
+    modal.addEventListener("keydown", trapModalFocus);
 }
 
 function closeModal(id) {
-    hide($(id));
+    const modal = $(id);
+    if (!modal) return;
+    hide(modal);
     document.body.style.overflow = "";
+    modal.removeEventListener("keydown", trapModalFocus);
+
+    if (lastModalFocus && document.contains(lastModalFocus)) {
+        lastModalFocus.focus();
+        lastModalFocus = null;
+    }
+}
+
+function trapModalFocus(e) {
+    if (e.key !== "Tab") return;
+    const modal = e.currentTarget;
+    const focusable = Array.from(
+        modal.querySelectorAll(
+            'button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])'
+        )
+    ).filter((el) => el.offsetParent !== null);
+    if (!focusable.length) return;
+
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+
+    if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+    }
 }
 
 /* ------------------------------------------------------------------
@@ -308,18 +351,36 @@ function setupSecurityGuards() {
 /* ------------------------------------------------------------------
    LOGIN
    ------------------------------------------------------------------ */
+function selectRole(btn) {
+    document.querySelectorAll(".role-btn").forEach((b) => {
+        const active = b === btn;
+        b.classList.toggle("is-active", active);
+        b.setAttribute("aria-checked", String(active));
+        if (active) b.tabIndex = 0;
+        else b.tabIndex = -1;
+    });
+    $("login-role").value = btn.dataset.role;
+    clearError($("login-error"));
+}
+
 function setupLoginTabs() {
-    document.querySelectorAll(".role-btn").forEach((btn) => {
-        btn.addEventListener("click", () => {
-            document.querySelectorAll(".role-btn").forEach((b) => {
-                b.classList.remove("is-active");
-                b.setAttribute("aria-selected", "false");
-            });
-            btn.classList.add("is-active");
-            btn.setAttribute("aria-selected", "true");
-            $("login-role").value = btn.dataset.role;
-            clearError($("login-error"));
+    const btns = Array.from(document.querySelectorAll(".role-btn"));
+    btns.forEach((btn) => {
+        btn.addEventListener("click", () => selectRole(btn));
+
+        btn.addEventListener("keydown", (e) => {
+            if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+            e.preventDefault();
+            const idx = btns.indexOf(btn);
+            const next = btns[(idx + (e.key === "ArrowRight" ? 1 : -1) + btns.length) % btns.length];
+            selectRole(next);
+            next.focus();
         });
+    });
+    // Inisialisasi tabindex radio: hanya yang aktif bisa difokus
+    const active = btns.find((b) => b.getAttribute("aria-checked") === "true") || btns[0];
+    btns.forEach((b) => {
+        b.tabIndex = b === active ? 0 : -1;
     });
 }
 
@@ -329,12 +390,16 @@ function resetRoleTabs() {
 }
 
 function setupPasswordToggle() {
-    $("toggle-password").addEventListener("click", () => {
+    const toggle = $("toggle-password");
+    toggle.addEventListener("click", () => {
         const input = $("login-password");
         const showPw = input.type === "password";
         input.type = showPw ? "text" : "password";
         $("icon-eye").style.display = showPw ? "none" : "";
         $("icon-eye-off").style.display = showPw ? "" : "none";
+        toggle.setAttribute("aria-pressed", String(showPw));
+        toggle.setAttribute("aria-label", showPw ? "Sembunyikan kata sandi" : "Tampilkan kata sandi");
+        input.focus();
     });
 }
 
@@ -1084,10 +1149,17 @@ async function renderPage(num) {
 
 function updatePdfControls() {
     if (!state.pdfDoc) return;
+    const windowEl = $("viewer-window");
     $("page-count").textContent = `${state.pdfPage} / ${state.pdfDoc.numPages}`;
     $("prev-page").disabled = state.pdfPage <= 1;
     $("next-page").disabled = state.pdfPage >= state.pdfDoc.numPages;
     $("zoom-label").textContent = `${state.pdfZoom}%`;
+
+    // Di atas 100%, biarkan canvas melebar sehingga zoom benar-benar terlihat;
+    // viewer-window tetap dapat discroll (vertikal & horizontal).
+    if (windowEl) {
+        windowEl.classList.toggle("zoom-large", state.pdfZoom > 100);
+    }
 }
 
 async function changePage(delta) {
