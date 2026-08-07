@@ -97,7 +97,7 @@ function showError(el, msg) {
     el.hidden = false;
 }
 function clearError(el) {
-    el.hidden = true;
+    if (el) el.hidden = true;
 }
 
 function setBusy(btn, busy) {
@@ -687,16 +687,17 @@ function renderBeritaAcara(list = []) {
 
 function setMonitorFreshness(live) {
     const pill = $("live-pill");
-    const text = $("live-pill-text");
     if (!pill) return;
 
     if (live) {
         pill.classList.remove("stale");
+        const text = $("live-pill-text");
         if (text) text.textContent = "Real-time";
         const fresh = $("monitor-fresh");
         if (fresh) fresh.textContent = `Terakhir ${fmtTime(new Date())}`;
     } else {
         pill.classList.add("stale");
+        const text = $("live-pill-text");
         if (text) text.textContent = "Menunggu koneksi…";
     }
 }
