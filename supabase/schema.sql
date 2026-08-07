@@ -19,6 +19,8 @@ CREATE TABLE IF NOT EXISTS public.users (
     token_valid BOOLEAN DEFAULT FALSE,
     exam_key TEXT,
     token_label TEXT,
+    exam_completed BOOLEAN DEFAULT FALSE,
+    exam_completed_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -28,6 +30,8 @@ ALTER TABLE public.users ADD COLUMN IF NOT EXISTS berita_acara_done BOOLEAN DEFA
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS token_valid BOOLEAN DEFAULT FALSE;
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS exam_key TEXT;
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS token_label TEXT;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS exam_completed BOOLEAN DEFAULT FALSE;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS exam_completed_at TIMESTAMPTZ;
 
 -- ============ TABEL: exam_tokens (token ujian) ============
 CREATE TABLE IF NOT EXISTS public.exam_tokens (
@@ -84,6 +88,7 @@ CREATE INDEX IF NOT EXISTS idx_attendance_session ON public.attendance (session_
 CREATE INDEX IF NOT EXISTS idx_berita_acara_session ON public.berita_acara (session_id);
 CREATE INDEX IF NOT EXISTS idx_tracking_session ON public.tracking_activity (session_id);
 CREATE INDEX IF NOT EXISTS idx_tracking_created ON public.tracking_activity (created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_tracking_session_created ON public.tracking_activity (session_id, created_at DESC);
 
 -- ============ ROW LEVEL SECURITY (amat disarankan) ============
 -- Catatan: Karena aplikasi memakai anon key dari klien server,

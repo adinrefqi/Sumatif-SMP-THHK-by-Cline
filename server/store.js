@@ -252,20 +252,29 @@ class MemoryStore {
     /* ---------------- Statistik Live Monitor ---------------- */
     getLiveSnapshot() {
         const sessions = [...this.sessions.values()];
+        const now = Date.now();
+        const activeWindowMs = 3 * 60 * 1000;
         const aktif = sessions.filter((s) => s.role === "siswa").map((s) => {
             const trk = this.getTrackingBySession(s.id);
             const last = trk.length ? trk[0] : null;
+            const lastAt = last ? last.at : s.createdAt;
+            const isActive = Boolean(lastAt && now - new Date(lastAt).getTime() <= activeWindowMs);
             return {
                 sessionId: s.id,
                 name: s.name,
                 className: s.className,
                 exam: s.exam,
                 attendance: !!this.getAttendanceBySession(s.id),
+                examCompleted: Boolean(s.examCompleted),
+                isActive,
                 lastEvent: last ? last.event : "login",
                 lastDetail: last ? last.detail : "-",
-                lastAt: last ? last.at : s.createdAt,
+                lastAt,
+                lastSeenAt: lastAt,
             };
         });
+
+        const aktifCount = aktif.filter((s) => s.isActive && !s.examCompleted).length;
 
         const pengawas = sessions.filter((s) => s.role === "pengawas").map((s) => ({ ...s }));
 
@@ -273,7 +282,7 @@ class MemoryStore {
             generatedAt: nowISO(),
             stats: {
                 totalSiswaLogin: this.attendance.length,
-                totalSiswaAktif: aktif.length,
+                totalSiswaAktif: aktifCount,
                 totalBeritaAcara: this.beritaAcara.length,
                 totalTokensDipakai: this.tokenUses.size,
                 totalTokenValid: this.tokens.size,
@@ -348,26 +357,8 @@ class SupabaseStore {
         return session;
     }
 
-    async getSession(token) {
-        if (!token) return null;
-
-        // Cek cache in-memory dulu
-        const cached = this.memory.getSession(token);
-        if (cached) return cached;
-
-        // Untuk serverless (Vercel), instance bisa berganti kapan saja.
-        // Jika tidak ada di memory, validasi token ke tabel `users` di Supabase.
-        const { data, error } = await this.client
-            .from(this.tables.users)
-            .select("*")
-            .eq("token", token)
-            .eq("active", true)
-            .maybeSingle();
-        if (error) throw error;
-        if (!data) return null;
-
-        // Rekonstruksi sesi dari database
-        const session = {
+    _buildSession(data) {
+        return {
             id: data.id,
             token: data.token,
             username: data.username,
@@ -380,9 +371,30 @@ class SupabaseStore {
             tokenValid: data.token_valid || false,
             examKey: data.exam_key || null,
             tokenLabel: data.token_label || null,
+            examCompleted: data.exam_completed || false,
+            examCompletedAt: data.exam_completed_at || null,
             createdAt: data.created_at || nowISO(),
         };
-        this.memory.sessions.set(session.token, session);
+    }
+
+    async getSession(token) {
+        if (!token) return null;
+
+        // Validasi state terbaru ke Supabase pada setiap request penting.
+        // Cache memory tidak boleh menghidangkan exam_completed yang stale
+        // setelah sesi selesai di instance serverless lain.
+        const { data, error } = await this.client
+            .from(this.tables.users)
+            .select("*")
+            .eq("token", token)
+            .eq("active", true)
+            .maybeSingle();
+        if (error) throw error;
+        if (!data) return null;
+
+        // Sinkronkan cache memory dengan data DB terbaru agar state lintas instance konsisten
+        const session = this._buildSession(data);
+        this.memory.sessions.set(token, session);
         return session;
     }
 
@@ -394,6 +406,8 @@ class SupabaseStore {
         if (state.tokenValid !== undefined) patch.token_valid = state.tokenValid;
         if (state.examKey !== undefined) patch.exam_key = state.examKey;
         if (state.tokenLabel !== undefined) patch.token_label = state.tokenLabel;
+        if (state.examCompleted !== undefined) patch.exam_completed = state.examCompleted;
+        if (state.examCompletedAt !== undefined) patch.exam_completed_at = state.examCompletedAt;
 
         if (Object.keys(patch).length === 0) return;
 
@@ -756,9 +770,12 @@ class SupabaseStore {
 
     /* ---------------- Statistik Live Monitor ---------------- */
     async getLiveSnapshot() {
-        // Muat ulang data real dari Supabase untuk monitor pengawas
+        const now = Date.now();
+        const activeWindowMs = 3 * 60 * 1000;
+
+        // Ambil data real dari Supabase agar akurat lintas instance serverless.
         try {
-            const [beritaRes, trackingRes] = await Promise.all([
+            const [beritaRes, trackingRes, usersRes, attendanceRes, tokenRes] = await Promise.all([
                 this.client
                     .from(this.tables.beritaAcara)
                     .select("*")
@@ -766,9 +783,20 @@ class SupabaseStore {
                     .limit(50),
                 this.client
                     .from(this.tables.tracking)
-                    .select("*")
+                    .select("session_id, student_name, user_role, event, detail, page, created_at")
                     .order("created_at", { ascending: false })
-                    .limit(100),
+                    .limit(200),
+                this.client
+                    .from(this.tables.users)
+                    .select("*")
+                    .eq("role", "siswa")
+                    .eq("active", true),
+                this.client
+                    .from(this.tables.attendance)
+                    .select("session_id"),
+                this.client
+                    .from(this.tables.tokens)
+                    .select("token"),
             ]);
 
             if (!beritaRes.error && beritaRes.data) {
@@ -798,8 +826,52 @@ class SupabaseStore {
                     at: t.created_at,
                 }));
             }
+
+            // Siswa aktif dihitung dari tabel `users` (bukan memory per-instance).
+            // lastEvent/lastAt diambil dari baris tracking paling baru per sesi.
+            const hadirSet = new Set((attendanceRes.data || []).map((a) => a.session_id));
+            const tokenCount = (tokenRes.data || []).length;
+            const students = (usersRes.data || []).map((u) => {
+                const trk = this.getTrackingBySession(u.id);
+                const last = trk.length ? trk[0] : null;
+                const lastAt = last ? last.at : u.created_at;
+                const isActive = Boolean(lastAt && now - new Date(lastAt).getTime() <= activeWindowMs);
+                return {
+                    sessionId: u.id,
+                    name: u.name,
+                    className: u.class_name,
+                    exam: u.exam,
+                    attendance: hadirSet.has(u.id),
+                    examCompleted: Boolean(u.exam_completed),
+                    isActive,
+                    lastEvent: last ? last.event : "login",
+                    lastDetail: last ? last.detail : "-",
+                    lastAt,
+                    lastSeenAt: lastAt,
+                };
+            });
+
+            const aktifCount = students.filter((s) => s.isActive && !s.examCompleted).length;
+
+            const stats = {
+                totalSiswaLogin: hadirSet.size,
+                totalSiswaAktif: aktifCount,
+                totalBeritaAcara: this.memory.beritaAcara.length,
+                totalTokensDipakai: this._tokenUsesCache.size,
+                totalTokenValid: tokenCount,
+                totalPeristiwa: this.memory.tracking.length,
+            };
+
+            return {
+                generatedAt: nowISO(),
+                stats,
+                siswa: students,
+                pengawas: [],
+                beritaAcara: [...this.memory.beritaAcara].reverse(),
+                kejadian: this.memory.getTracking(),
+            };
         } catch (e) {
-            // Abaikan - pakai data cache
+            // Abaikan - pakai data cache bila kueri DB gagal
         }
 
         return this.memory.getLiveSnapshot();

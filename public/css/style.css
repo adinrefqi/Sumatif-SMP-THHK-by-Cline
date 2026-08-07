@@ -832,6 +832,24 @@ textarea:focus {
     animation: pulse 1.6s ease infinite;
 }
 
+.live-pill.stale {
+    background: rgba(239, 68, 68, 0.16);
+    border-color: rgba(248, 113, 113, 0.4);
+}
+
+.live-pill.stale .dot {
+    background: #f87171;
+    box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.25);
+    animation: none;
+}
+
+.monitor-fresh {
+    font-size: 0.72rem;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.75);
+    white-space: nowrap;
+}
+
 @keyframes pulse {
 
     0%,

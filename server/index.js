@@ -193,8 +193,32 @@ app.get("/api/session", requireSession(null), (req, res) => {
         beritaAcaraDone: req.session.beritaAcaraDone || false,
         tokenValid: req.session.tokenValid || false,
         tokenLabel: req.session.tokenLabel || null,
+        examCompleted: req.session.examCompleted || false,
         examTitle: req.session.examKey ? examTitle(req.session.examKey) : null,
     });
+});
+
+/* ---------- Selesai ujian (siswa) ---------- */
+app.post("/api/finish", requireSession("siswa"), async (req, res) => {
+    if (!req.session.tokenValid) {
+        return res.status(403).json({ error: "Token ujian belum divalidasi." });
+    }
+
+    // Idempotent: menandai ulang tidak berbahaya.
+    req.session.examCompleted = true;
+    req.session.examCompletedAt = new Date().toISOString();
+    try {
+        await store.updateSessionState(req.sessionToken, {
+            examCompleted: true,
+            examCompletedAt: req.session.examCompletedAt,
+        });
+    } catch (e) {
+        return res.status(500).json({ error: "Gagal menyimpan penyelesaian ujian." });
+    }
+
+    // Catat di server (authoritative), bukan dari sisi klien.
+    track(req, "selesai_ujian", "Siswa menekan Selesai Ujian");
+    return res.json({ ok: true });
 });
 
 /* ---------- Logout ---------- */
@@ -211,6 +235,10 @@ app.post("/api/logout", requireSession(null), async (req, res) => {
 
 /* ---------- Presensi (siswa) ---------- */
 app.post("/api/presensi", requireSession("siswa"), async (req, res) => {
+    if (req.session.examCompleted) {
+        return res.status(403).json({ error: "Anda telah menyelesaikan ujian ini." });
+    }
+
     const { room } = req.body || {};
     if (!room || !String(room).trim()) {
         return res.status(400).json({ error: "Ruang ujian wajib diisi." });
@@ -345,6 +373,10 @@ app.delete("/api/tokens/:token", requireSession("pengawas"), async (req, res) =>
 
 /* ---------- Token ujian (siswa) ---------- */
 app.post("/api/token", requireSession("siswa"), async (req, res) => {
+    if (req.session.examCompleted) {
+        return res.status(403).json({ error: "Anda telah menyelesaikan ujian ini." });
+    }
+
     const { token } = req.body || {};
     if (!token || !String(token).trim()) {
         return res.status(400).json({ error: "Token wajib diisi." });
@@ -409,6 +441,10 @@ app.get("/api/pdf/:examKey", requireSession("siswa"), async (req, res) => {
     }
     if (!req.session.tokenValid) {
         return res.status(403).json({ error: "Token ujian belum divalidasi." });
+    }
+    if (req.session.examCompleted) {
+        track(req, "akses_ditolak", "Mencoba buka PDF setelah ujian selesai");
+        return res.status(403).json({ error: "Anda telah menyelesaikan ujian ini." });
     }
     if (req.session.examKey !== examKey) {
         track(req, "akses_ditolak", `Coba akses PDF ${examKey} tanpa izin`);

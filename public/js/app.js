@@ -50,6 +50,7 @@ const EVENT_LABELS = {
     akses_ditolak: "Akses Ditolak",
     pdf_buka: "PDF Dibuka",
     pdf_halaman: "Ganti Halaman",
+    pdf_aktif: "Masih Aktif",
     pdf_tutup: "PDF Ditutup",
     berita_acara: "Berita Acara",
     selesai_ujian: "Selesai Ujian",
@@ -73,6 +74,8 @@ const state = {
     pdfPage: 1,
     pdfZoom: 100,
     monitorTimer: null,
+    monitorLoading: false,
+    keepaliveTimer: null,
 };
 
 /* ------------------------------------------------------------------
@@ -572,7 +575,8 @@ function statusChip(event) {
 
 function renderSiswa(list = []) {
     const body = $("monitor-siswa-body");
-    $("badge-siswa-aktif").textContent = String(list.length);
+    const activeCount = list.filter((s) => s.isActive && !s.examCompleted).length;
+    $("badge-siswa-aktif").textContent = String(activeCount);
 
     if (!list.length) {
         body.innerHTML = '<tr class="empty-row"><td colspan="6">Belum ada siswa yang masuk.</td></tr>';
@@ -585,13 +589,23 @@ function renderSiswa(list = []) {
                 ? '<span class="badge badge-success">Hadir</span>'
                 : '<span class="badge badge-warn">Belum</span>';
 
+            // Status terakhir yang jujur: selesai > tidak aktif > peristiwa terakhir
+            let status;
+            if (s.examCompleted) {
+                status = '<span class="badge badge-danger">Selesai</span>';
+            } else if (!s.isActive) {
+                status = '<span class="badge badge-muted">Tidak aktif</span>';
+            } else {
+                status = statusChip(s.lastEvent);
+            }
+
             return `
                 <tr>
                     <td><strong>${esc(s.name)}</strong></td>
                     <td>${esc(s.className || "—")}</td>
                     <td>${esc(examLabel(s.exam))}</td>
                     <td>${attendance}</td>
-                    <td>${statusChip(s.lastEvent)}</td>
+                    <td>${status}</td>
                     <td>
                         ${fmtTime(s.lastAt)}
                         <div style="color:#8a97a8;font-size:.72rem;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(s.lastDetail || "")}</div>
@@ -671,24 +685,50 @@ function renderBeritaAcara(list = []) {
         .join("");
 }
 
+function setMonitorFreshness(live) {
+    const pill = $("live-pill");
+    const text = $("live-pill-text");
+    if (!pill) return;
+
+    if (live) {
+        pill.classList.remove("stale");
+        if (text) text.textContent = "Real-time";
+        const fresh = $("monitor-fresh");
+        if (fresh) fresh.textContent = `Terakhir ${fmtTime(new Date())}`;
+    } else {
+        pill.classList.add("stale");
+        if (text) text.textContent = "Menunggu koneksi…";
+    }
+}
+
 async function loadMonitor() {
+    if (state.monitorLoading) return; // hindari tumpukan request
+    state.monitorLoading = true;
     try {
         const data = await api("/api/monitor");
         renderStats(data.stats);
         renderSiswa(data.siswa);
         renderLog(data.kejadian);
         renderBeritaAcara(data.beritaAcara);
+        setMonitorFreshness(true);
     } catch (err) {
         if (err.status === 401 || err.status === 403) {
             clearInterval(state.monitorTimer);
             showToast("Sesi Anda berakhir. Silakan login ulang.");
             showScreen("screen-login");
+        } else {
+            // Gagal jaringan/server: tandai pill sebagai stale
+            setMonitorFreshness(false);
         }
+    } finally {
+        state.monitorLoading = false;
     }
 }
 
 function startMonitor() {
     clearInterval(state.monitorTimer);
+    // Muat segera, lalu poll tiap 4 detik
+    loadMonitor();
     state.monitorTimer = setInterval(loadMonitor, 4000);
 }
 
@@ -883,7 +923,11 @@ function renderStudentHead() {
 function routeStudentStep() {
     const s = state.session;
 
-    if (!s.attendanceDone) {
+    if (s.examCompleted) {
+        state.finished = true;
+        state.viewerActive = false;
+        renderFinishedOverlay();
+    } else if (!s.attendanceDone) {
         renderAttendanceNeeded();
         openPresensiModal();
     } else if (!s.tokenValid) {
@@ -1008,6 +1052,10 @@ function configurePdfWorker() {
 }
 
 async function renderPdfViewer() {
+    if (state.finished || state.session?.examCompleted) {
+        renderFinishedOverlay();
+        return;
+    }
     if (!state.examKey) {
         showToast("Sesi soal belum tersedia. Silakan login ulang.");
         showScreen("screen-login");
@@ -1019,6 +1067,7 @@ async function renderPdfViewer() {
     state.pdfPage = 1;
     state.pdfZoom = 100;
     state.pdfDoc = null;
+    startKeepalive();
 
     const label = examLabel(state.examKey);
     $("stud-subtitle").textContent = `Soal: ${label}`;
@@ -1176,27 +1225,32 @@ async function changeZoom(delta) {
     updatePdfControls();
 }
 
+/* ---------- Keepalive siswa saat viewer aktif ---------- */
+function startKeepalive() {
+    clearInterval(state.keepaliveTimer);
+    state.keepaliveTimer = setInterval(() => {
+        if (state.viewerActive && !state.finished) {
+            sendBeaconTrack("pdf_aktif", "Siswa masih aktif di penampil PDF");
+        }
+    }, 60 * 1000);
+}
+
+function stopKeepalive() {
+    clearInterval(state.keepaliveTimer);
+    state.keepaliveTimer = null;
+}
+
 /* ---------- Selesai ujian ---------- */
 function openFinishModal() {
     openModal("modal-finish");
 }
 
-async function handleFinishConfirm() {
-    const btn = $("finish-confirm");
-    setBusy(btn, true);
-
-    // TRACK: PDF ditutup via tombol selesai
-    try {
-        await trackEvent("pdf_tutup", "Ujian diselesaikan oleh siswa");
-        await trackEvent("selesai_ujian", "Siswa menekan Selesai Ujian");
-    } catch (e) { /* abaikan */ }
-
-    state.finished = true;
-    state.viewerActive = false;
-    closeModal("modal-finish");
+function renderFinishedOverlay() {
+    // Hapus overlay lama bila sudah ada
+    document.querySelectorAll(".finished-overlay").forEach((el) => el.remove());
 
     const body = $("student-body");
-    body.replaceChildren();
+    if (body) body.replaceChildren();
 
     const overlay = document.createElement("div");
     overlay.className = "finished-overlay";
@@ -1217,6 +1271,27 @@ async function handleFinishConfirm() {
     overlay.querySelector("#finish-logout").addEventListener("click", handleLogout);
 }
 
+async function handleFinishConfirm() {
+    const btn = $("finish-confirm");
+    setBusy(btn, true);
+
+    try {
+        // Simpan penyelesaian di server (authoritative, tahan refresh)
+        await api("/api/finish", { method: "POST" });
+
+        state.finished = true;
+        state.viewerActive = false;
+        state.session.examCompleted = true;
+        stopKeepalive();
+        closeModal("modal-finish");
+        renderFinishedOverlay();
+    } catch (err) {
+        showToast(err.message || "Gagal menyimpan penyelesaian ujian. Coba lagi.");
+    } finally {
+        setBusy(btn, false);
+    }
+}
+
 /* ------------------------------------------------------------------
    LOGOUT & SESSION TEARDOWN
    ------------------------------------------------------------------ */
@@ -1233,6 +1308,7 @@ async function handleLogout() {
 function teardownSession() {
     clearInterval(state.monitorTimer);
     state.monitorTimer = null;
+    stopKeepalive();
     state.role = null;
     state.session = null;
     state.examKey = null;
@@ -1279,6 +1355,7 @@ async function bootstrap() {
                 tokenValid: s.tokenValid,
                 examKey: s.examKey,
                 tokenLabel: s.tokenLabel,
+                examCompleted: s.examCompleted,
             };
             await enterStudent();
         } else {
@@ -1301,10 +1378,11 @@ function init() {
     $("login-form").addEventListener("submit", handleLogin);
 
     $("logout-btn").addEventListener("click", handleLogout);
-    $("refresh-monitor").addEventListener("click", () => {
-        loadMonitor();
-        loadTokens();
-        showToast("Monitor diperbarui.");
+    $("refresh-monitor").addEventListener("click", async () => {
+        await Promise.all([loadMonitor(), loadTokens()]);
+        if (!$("live-pill")?.classList.contains("stale")) {
+            showToast("Monitor diperbarui.");
+        }
     });
 
     $("presensi-form").addEventListener("submit", handlePresensiSubmit);
