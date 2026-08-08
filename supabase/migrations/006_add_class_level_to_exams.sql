@@ -11,7 +11,28 @@
 --   - class_name = ''   → PDF default (dipakai bila level tidak ada)
 --
 -- Idempotent: aman dijalankan berulang kali.
+--
+-- MENGGANTIKAN migrasi 004. Cukup jalankan file ini saja; JANGAN
+-- jalankan 004 setelah 006 karena 004 memakai ON CONFLICT (exam_key)
+-- yang constraint-nya sudah dihapus di langkah 2 di bawah
+-- (error 42P10: no unique or exclusion constraint matching).
 -- =========================================================
+
+-- 0) Buat tabel bila database masih baru (tanpa perlu migrasi 004)
+CREATE TABLE IF NOT EXISTS public.exams (
+    id SERIAL PRIMARY KEY,
+    exam_key TEXT NOT NULL,
+    title TEXT NOT NULL,
+    drive_file_id TEXT DEFAULT '',
+    updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_exams_key ON public.exams (exam_key);
+
+ALTER TABLE public.exams ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Server full access exams" ON public.exams;
+CREATE POLICY "Server full access exams" ON public.exams
+    FOR ALL USING (true) WITH CHECK (true);
 
 -- 1) Tambahkan kolom class_name jika belum ada
 ALTER TABLE public.exams ADD COLUMN IF NOT EXISTS class_name TEXT DEFAULT '';

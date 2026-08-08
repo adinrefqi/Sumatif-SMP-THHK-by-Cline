@@ -912,38 +912,40 @@ function renderTokens(groups = []) {
     const badge = $("badge-token");
     if (badge) badge.textContent = String(total);
 
-    if (!groups.length) {
+    // Mapel tanpa token tidak perlu kartu kosong — daftar jadi jauh lebih ringkas.
+    const filled = groups.filter((g) => g.tokens.length);
+
+    if (!filled.length) {
         container.innerHTML = '<div class="log-empty">Belum ada token. Buat token di atas.</div>';
         return;
     }
 
-    const html = groups
+    const html = filled
         .map((group) => {
-            const items = group.tokens.length
-                ? group.tokens
-                    .map((t) => {
-                        const usedBadge = t.uses > 0
-                            ? `<span class="badge badge-warn">Dipakai ${t.uses}×</span>`
-                            : '<span class="badge badge-muted">Belum dipakai</span>';
-                        return `
+            const items = group.tokens
+                .map((t) => {
+                    const usedBadge = t.uses > 0
+                        ? `<span class="badge badge-warn">${t.uses}×</span>`
+                        : '<span class="badge badge-muted">Belum</span>';
+                    return `
                             <div class="token-item">
                                 <button type="button" class="token-code" data-token="${esc(t.token)}"
                                     title="Salin ${esc(t.token)}">${esc(t.token)}
-                                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                         <rect x="9" y="9" width="13" height="13" rx="2"/>
                                         <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
                                     </svg>
                                 </button>
                                 <div class="token-meta">
                                     <div class="token-label">${esc(t.label || t.examTitle)}</div>
-                                    <div class="token-sub">${esc(t.examTitle)} • ${esc(t.createdBy || "pengawas")} • ${fmtTime(t.createdAt)}</div>
+                                    <div class="token-sub">${esc(t.createdBy || "pengawas")} • ${fmtTime(t.createdAt)}</div>
                                 </div>
                                 ${usedBadge}
-                                <button type="button" class="btn btn-danger btn-xs" data-del="${esc(t.token)}">Hapus</button>
+                                <button type="button" class="btn btn-danger btn-xs" data-del="${esc(t.token)}"
+                                    title="Hapus token ${esc(t.token)}" aria-label="Hapus token ${esc(t.token)}">&times;</button>
                             </div>`;
-                    })
-                    .join("")
-                : '<div class="log-empty">Belum ada token untuk mapel ini.</div>';
+                })
+                .join("");
 
             return `
                 <div class="token-group">
@@ -951,7 +953,7 @@ function renderTokens(groups = []) {
                         <strong>${esc(group.examTitle)}</strong>
                         <span class="panel-badge">${group.tokens.length}</span>
                     </div>
-                    ${group.tokens.length ? items : '<div class="log-empty">Belum ada token untuk mapel ini.</div>'}
+                    ${items}
                 </div>`;
         })
         .join("");

@@ -1073,19 +1073,19 @@ textarea:focus {
 }
 
 .token-manager {
-    padding: 18px 20px;
+    padding: 14px 20px 16px;
 }
 
 .token-create-form {
     display: flex;
     align-items: flex-end;
-    gap: 14px;
+    gap: 10px;
     flex-wrap: wrap;
 }
 
 .token-create-form .field {
     flex: 1;
-    min-width: 180px;
+    min-width: 170px;
     margin-bottom: 0;
 }
 
@@ -1093,37 +1093,65 @@ textarea:focus {
     flex: 1.2;
 }
 
+/* Form ringkas: label kecil, input setinggi tombol */
+.token-create-form label {
+    font-size: 0.76rem;
+    margin-bottom: 4px;
+}
+
+.token-create-form input,
+.token-create-form select {
+    padding: 9px 12px 9px 38px;
+    font-size: 0.86rem;
+}
+
+.token-create-form .btn {
+    padding: 9px 18px;
+    font-size: 0.86rem;
+}
+
+/* Mapel tanpa token tidak dirender, sisanya disusun berdampingan */
 .token-list {
-    margin-top: 18px;
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
+    margin-top: 14px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+    gap: 10px;
+    align-items: start;
 }
 
 .token-group {
     border: 1px solid var(--line);
-    border-radius: 12px;
+    border-radius: 10px;
     overflow: hidden;
+}
+
+.token-list .log-empty {
+    grid-column: 1 / -1;
 }
 
 .token-group-head {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 10px 14px;
+    gap: 8px;
+    padding: 7px 12px;
     background: var(--navy-50);
     border-bottom: 1px solid var(--line);
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     color: var(--navy-800);
+}
+
+.token-group-head .panel-badge {
+    font-size: 0.7rem;
+    padding: 2px 8px;
 }
 
 .token-item {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 12px 14px;
+    gap: 8px;
+    padding: 7px 10px 7px 12px;
     border-bottom: 1px solid var(--line);
-    flex-wrap: wrap;
 }
 
 .token-item:last-child {
@@ -1133,16 +1161,16 @@ textarea:focus {
 .token-code {
     display: inline-flex;
     align-items: center;
-    gap: 7px;
+    gap: 5px;
     font-family: "Courier New", monospace;
     font-weight: 800;
-    font-size: 1rem;
-    letter-spacing: 2px;
+    font-size: 0.86rem;
+    letter-spacing: 1.5px;
     color: var(--navy-800);
     background: var(--gold-soft);
     border: 1px dashed #d9b65a;
-    border-radius: 10px;
-    padding: 7px 12px;
+    border-radius: 7px;
+    padding: 4px 8px;
     cursor: pointer;
     transition: background 0.15s ease, transform 0.15s ease;
 }
@@ -1155,32 +1183,48 @@ textarea:focus {
 
 .token-meta {
     flex: 1;
-    min-width: 160px;
+    min-width: 0;
+}
+
+.token-label,
+.token-sub {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .token-label {
-    font-size: 0.86rem;
+    font-size: 0.8rem;
     font-weight: 700;
     color: var(--ink);
 }
 
 .token-sub {
-    font-size: 0.74rem;
+    font-size: 0.7rem;
     color: var(--muted);
+}
+
+.token-item .token-code,
+.token-item .badge {
+    flex: none;
+}
+
+/* Tombol hapus jadi ikon bulat kecil, bukan tombol berlabel */
+.token-item .btn-danger.btn-xs {
+    flex: none;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border-radius: 50%;
+    font-size: 1.05rem;
+    line-height: 1;
+    display: grid;
+    place-items: center;
 }
 
 @media (max-width: 640px) {
     .token-create-form .field {
         min-width: 100%;
-    }
-
-    .token-item {
-        align-items: flex-start;
-    }
-
-    .token-meta {
-        min-width: 100%;
-        order: 3;
     }
 }
 

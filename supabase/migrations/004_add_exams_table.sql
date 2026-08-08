@@ -1,5 +1,15 @@
 -- =========================================================
--- MIGRASI 004 - TABEL MAPEL (exams)
+-- MIGRASI 004 - TABEL MAPEL (exams)   [KEDALUWARSA]
+-- ---------------------------------------------------------
+-- JANGAN DIJALANKAN LAGI. Sudah digantikan migrasi 006, yang
+-- membuat tabelnya sendiri, memakai unique (exam_key, class_name),
+-- dan memuat daftar mapel yang benar.
+--
+-- Menjalankan file ini pada database yang sudah kena 006 akan gagal:
+--   ERROR 42P10: there is no unique or exclusion constraint
+--                matching the ON CONFLICT specification
+-- karena constraint exams_exam_key_key sudah dihapus oleh 006.
+-- Berkas ini disimpan hanya sebagai catatan riwayat.
 -- ---------------------------------------------------------
 -- Menyimpan Google Drive File ID per mata pelajaran.
 -- Kolom drive_file_id diisi dari Supabase Dashboard
