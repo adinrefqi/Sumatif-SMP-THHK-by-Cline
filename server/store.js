@@ -266,6 +266,8 @@ class MemoryStore {
                 name: s.name,
                 className: s.className,
                 exam: s.exam,
+                room: s.room || null,
+                examNumber: s.examNumber || null,
                 attendance: !!this.getAttendanceBySession(s.id),
                 examCompleted: Boolean(s.examCompleted),
                 isActive,

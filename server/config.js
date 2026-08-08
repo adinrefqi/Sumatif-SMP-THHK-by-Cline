@@ -630,8 +630,19 @@ module.exports = {
 };
 
 // ============ PEMBAGIAN RUANG & NOMOR UJIAN ============
-// Bagi merata ke Ruang 1/2/3 (kelas tercampur) dan beri nomor ujian berurutan.
-module.exports.studentCredentials.forEach((s, i) => {
+// Ruang dibagi round-robin PER KELAS dengan penghitung berjalan, jadi:
+// - tiap kelas (7/8/9) tersebar ke Ruang 1, 2, dan 3;
+// - jumlah siswa tiap ruang selisihnya maksimal 1;
+// - hasilnya tetap sama tiap restart (tidak acak) dan tidak bergantung
+//   pada urutan daftar di atas.
+const ROOMS = ["Ruang 1", "Ruang 2", "Ruang 3"];
+const students = module.exports.studentCredentials;
+let seat = 0;
+for (const className of [...new Set(students.map((s) => s.className))].sort()) {
+    for (const s of students.filter((x) => x.className === className)) {
+        s.room = ROOMS[seat++ % ROOMS.length];
+    }
+}
+students.forEach((s, i) => {
     s.examNumber = String(i + 1).padStart(3, "0");
-    s.room = `Ruang ${(i % 3) + 1}`;
 });
