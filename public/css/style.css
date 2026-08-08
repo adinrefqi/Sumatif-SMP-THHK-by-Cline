@@ -1546,6 +1546,12 @@ textarea:focus {
     text-align: center;
 }
 
+.zoom-range {
+    width: 110px;
+    accent-color: var(--navy-700);
+    cursor: pointer;
+}
+
 .viewer-window {
     width: 100%;
     background: #dfe4ec;
@@ -1571,7 +1577,7 @@ textarea:focus {
 }
 
 .pdf-canvas-wrap canvas {
-    max-width: 100%;
+    max-width: none;
     height: auto;
     display: block;
     border-radius: 4px;
@@ -1579,10 +1585,6 @@ textarea:focus {
 
 .viewer-window.zoom-large .pdf-canvas-wrap {
     justify-content: flex-start;
-}
-
-.viewer-window.zoom-large .pdf-canvas-wrap canvas {
-    max-width: none;
 }
 
 .viewer-loader {
@@ -1815,6 +1817,10 @@ textarea:focus {
 
     .viewer-controls .page-count {
         min-width: 72px;
+    }
+
+    .zoom-range {
+        width: min(120px, 30vw);
     }
 
     .viewer-window {

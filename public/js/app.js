@@ -16,6 +16,10 @@
 const PDFJS_CDN = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
 const PDFJS_WORKER = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 const PDF_DEFAULT_ZOOM = 140;
+const PDF_MOBILE_DEFAULT_ZOOM = 180;
+const PDF_MIN_ZOOM = 50;
+const PDF_MAX_ZOOM = 400;
+const PDF_ZOOM_STEP = 5;
 
 const EXAM_LABELS = {
     agama_katolik: "Agama Katolik",
@@ -62,6 +66,10 @@ const EVENT_LABELS = {
 
 const SCREENS = ["screen-login", "screen-monitor", "screen-student"];
 
+function defaultPdfZoom() {
+    return window.matchMedia("(max-width: 640px)").matches ? PDF_MOBILE_DEFAULT_ZOOM : PDF_DEFAULT_ZOOM;
+}
+
 /* ------------------------------------------------------------------
    STATE
    ------------------------------------------------------------------ */
@@ -73,7 +81,7 @@ const state = {
     finished: false,     // apakah ujian sudah diselesaikan
     pdfDoc: null,        // dokumen PDF.js
     pdfPage: 1,
-    pdfZoom: PDF_DEFAULT_ZOOM,
+    pdfZoom: defaultPdfZoom(),
     monitorTimer: null,
     monitorLoading: false,
     keepaliveTimer: null,
@@ -1067,7 +1075,7 @@ async function renderPdfViewer() {
     state.viewerActive = true;
     state.finished = false;
     state.pdfPage = 1;
-    state.pdfZoom = PDF_DEFAULT_ZOOM;
+    state.pdfZoom = defaultPdfZoom();
     state.pdfDoc = null;
     startKeepalive();
 
@@ -1100,6 +1108,7 @@ async function renderPdfViewer() {
                     </button>
                     <button type="button" class="zoom-btn" id="zoom-out" aria-label="Perkecil">−</button>
                     <span class="zoom-label" id="zoom-label">${state.pdfZoom}%</span>
+                    <input type="range" class="zoom-range" id="zoom-range" min="${PDF_MIN_ZOOM}" max="${PDF_MAX_ZOOM}" step="${PDF_ZOOM_STEP}" value="${state.pdfZoom}" aria-label="Atur zoom PDF" />
                     <button type="button" class="zoom-btn" id="zoom-in" aria-label="Perbesar">+</button>
                 </div>
             </div>
@@ -1129,6 +1138,9 @@ async function renderPdfViewer() {
     $("next-page").addEventListener("click", () => changePage(1));
     $("zoom-in").addEventListener("click", () => changeZoom(20));
     $("zoom-out").addEventListener("click", () => changeZoom(-20));
+    $("zoom-range").addEventListener("input", (event) => previewPdfZoom(event.target.value));
+    $("zoom-range").addEventListener("change", () => renderPage(state.pdfPage));
+    setupPdfPinchZoom();
     $("finish-btn").addEventListener("click", openFinishModal);
 
     $("finish-title").textContent = "Selesaikan Ujian?";
@@ -1180,10 +1192,14 @@ async function renderPage(num) {
     if (!canvas) return;
 
     const viewport = page.getViewport({ scale: state.pdfZoom / 100 });
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const dpr = state.pdfZoom > 200 ? 1 : Math.min(window.devicePixelRatio || 1, 2);
 
     canvas.width = Math.floor(viewport.width * dpr);
     canvas.height = Math.floor(viewport.height * dpr);
+    canvas.style.width = `${Math.floor(viewport.width)}px`;
+    canvas.style.height = `${Math.floor(viewport.height)}px`;
+    canvas.dataset.renderZoom = String(state.pdfZoom);
+    canvas.dataset.renderWidth = String(viewport.width);
 
     const ctx = canvas.getContext("2d", { alpha: false });
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -1205,6 +1221,7 @@ function updatePdfControls() {
     $("prev-page").disabled = state.pdfPage <= 1;
     $("next-page").disabled = state.pdfPage >= state.pdfDoc.numPages;
     $("zoom-label").textContent = `${state.pdfZoom}%`;
+    $("zoom-range").value = String(state.pdfZoom);
 
     // Di atas 100%, biarkan canvas melebar sehingga zoom benar-benar terlihat;
     // viewer-window tetap dapat discroll (vertikal & horizontal).
@@ -1222,9 +1239,75 @@ async function changePage(delta) {
 
 async function changeZoom(delta) {
     if (!state.pdfDoc) return;
-    state.pdfZoom = Math.min(200, Math.max(50, state.pdfZoom + delta));
+    state.pdfZoom = clampPdfZoom(state.pdfZoom + delta);
     await renderPage(state.pdfPage);
-    updatePdfControls();
+}
+
+function clampPdfZoom(zoom) {
+    return Math.min(PDF_MAX_ZOOM, Math.max(PDF_MIN_ZOOM, Math.round(Number(zoom) / PDF_ZOOM_STEP) * PDF_ZOOM_STEP));
+}
+
+function previewPdfZoom(zoom) {
+    const canvas = $("pdf-canvas");
+    const viewer = $("viewer-window");
+    const previousZoom = Number(canvas?.dataset.renderZoom || state.pdfZoom);
+    state.pdfZoom = clampPdfZoom(zoom);
+    $("zoom-label").textContent = `${state.pdfZoom}%`;
+    $("zoom-range").value = String(state.pdfZoom);
+    viewer?.classList.toggle("zoom-large", state.pdfZoom > 100);
+
+    if (canvas && previousZoom) {
+        const ratio = state.pdfZoom / previousZoom;
+        canvas.style.width = `${Math.floor(Number(canvas.dataset.renderWidth) * ratio)}px`;
+        canvas.style.height = "auto";
+    }
+}
+
+function setupPdfPinchZoom() {
+    const viewer = $("viewer-window");
+    let startDistance = 0;
+    let startZoom = state.pdfZoom;
+    let startScrollLeft = 0;
+    let startScrollTop = 0;
+    let focusX = 0;
+    let focusY = 0;
+
+    const touchDistance = (touches) => Math.hypot(
+        touches[0].clientX - touches[1].clientX,
+        touches[0].clientY - touches[1].clientY
+    );
+
+    viewer.addEventListener("touchstart", (event) => {
+        if (event.touches.length !== 2 || !state.pdfDoc) return;
+        startDistance = touchDistance(event.touches);
+        startZoom = state.pdfZoom;
+        startScrollLeft = viewer.scrollLeft;
+        startScrollTop = viewer.scrollTop;
+        const rect = viewer.getBoundingClientRect();
+        focusX = (event.touches[0].clientX + event.touches[1].clientX) / 2 - rect.left;
+        focusY = (event.touches[0].clientY + event.touches[1].clientY) / 2 - rect.top;
+    }, { passive: true });
+
+    viewer.addEventListener("touchmove", (event) => {
+        if (event.touches.length !== 2 || !startDistance) return;
+        event.preventDefault();
+        previewPdfZoom(startZoom * touchDistance(event.touches) / startDistance);
+        const ratio = state.pdfZoom / startZoom;
+        viewer.scrollLeft = (startScrollLeft + focusX) * ratio - focusX;
+        viewer.scrollTop = (startScrollTop + focusY) * ratio - focusY;
+    }, { passive: false });
+
+    viewer.addEventListener("touchend", (event) => {
+        if (!startDistance || event.touches.length > 1) return;
+        startDistance = 0;
+        renderPage(state.pdfPage);
+    });
+
+    viewer.addEventListener("touchcancel", () => {
+        if (!startDistance) return;
+        startDistance = 0;
+        renderPage(state.pdfPage);
+    });
 }
 
 /* ---------- Keepalive siswa saat viewer aktif ---------- */
@@ -1318,7 +1401,7 @@ function teardownSession() {
     state.finished = false;
     state.pdfDoc = null;
     state.pdfPage = 1;
-    state.pdfZoom = PDF_DEFAULT_ZOOM;
+    state.pdfZoom = defaultPdfZoom();
 
     document.querySelectorAll(".finished-overlay").forEach((el) => el.remove());
 
