@@ -1801,32 +1801,62 @@ textarea:focus {
     }
 
     .viewer-toolbar {
-        flex-direction: column;
-        align-items: stretch;
+        gap: 5px;
+        padding: 6px 8px;
+        border-radius: 10px;
     }
 
-    .viewer-toolbar-info strong {
-        max-width: 160px;
+    .viewer-toolbar-info {
+        display: none;
     }
 
     .viewer-controls {
         width: 100%;
         justify-content: center;
-        gap: 6px;
+        gap: 4px;
+        flex-wrap: nowrap;
     }
 
     .viewer-controls .page-count {
-        min-width: 72px;
+        min-width: 38px;
+        font-size: 0.68rem;
+    }
+
+    .page-nav,
+    .zoom-btn {
+        width: 28px;
+        height: 28px;
+        border-radius: 8px;
+    }
+
+    .page-nav svg {
+        width: 14px;
+        height: 14px;
+    }
+
+    .zoom-label {
+        min-width: 34px;
+        font-size: 0.68rem;
     }
 
     .zoom-range {
-        width: min(120px, 30vw);
+        width: clamp(52px, 18vw, 72px);
     }
 
     .viewer-window {
-        padding: 10px;
-        min-height: 50vh;
-        max-height: 72vh;
+        padding: 6px;
+        min-height: 65vh;
+        max-height: 82vh;
+        border-radius: 10px;
+    }
+
+    .viewer-shell {
+        gap: 8px;
+    }
+
+    .student-body {
+        align-items: flex-start;
+        padding: 10px 8px 20px;
     }
 
     .gate-card {
