@@ -9,6 +9,63 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
+    <!--
+        🕐 Chip status (jam + baterai) — kecil, transparan, di pojok kanan atas
+        agar TIDAK menutupi tampilan webview.
+    -->
+    <LinearLayout
+        android:id="@+id/examStatusBar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|end"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="8dp"
+        android:background="@drawable/bg_status_chip"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="10dp"
+        android:paddingVertical="4dp">
+
+        <TextView
+            android:id="@+id/examClock"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="monospace"
+            android:text="14:27"
+            android:textColor="#FFFFFF"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/examBattery"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:fontFamily="monospace"
+            android:text="87%"
+            android:textColor="#FFFFFF"
+            android:textSize="12sp" />
+
+    </LinearLayout>
+
+    <!--
+        ⏻ Tombol OFF di pojok kanan bawah.
+        Menekan tombol ini → dialog PIN → jika benar → alarm 95% + force close.
+    -->
+    <ImageButton
+        android:id="@+id/powerOffButton"
+        android:layout_width="44dp"
+        android:layout_height="44dp"
+        android:layout_gravity="bottom|end"
+        android:layout_marginEnd="12dp"
+        android:layout_marginBottom="12dp"
+        android:background="@drawable/bg_power_button"
+        android:contentDescription="Matikan aplikasi"
+        android:src="@android:drawable/ic_lock_power_off"
+        android:tint="#FFFFFF"
+        android:padding="10dp" />
+
+    <!-- Progress bar -->
     <ProgressBar
         android:id="@+id/progressBar"
         style="?android:attr/progressBarStyleHorizontal"
@@ -19,13 +76,42 @@
         android:progressTint="@color/primary"
         android:visibility="gone" />
 
-    <!-- Overlay flash merah saat pelanggaran terdeteksi -->
-    <View
-        android:id="@+id/alarmFlashOverlay"
+    <!--
+        🚫 Layar penutup anti-floating apps.
+        Tampil saat floating window (chat head, PiP, bubble, overlay) terdeteksi.
+        View ini berada DI DALAM Activity sendiri — TANPA SYSTEM_ALERT_WINDOW,
+        tanpa AccessibilityService, tanpa izin sensitif apa pun.
+    -->
+    <LinearLayout
+        android:id="@+id/floatingPunishmentOverlay"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="@color/alarm_red"
-        android:alpha="0.0"
-        android:visibility="gone" />
+        android:background="#CC000000"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="32dp"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/floatingWarningTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:text="🚫"
+            android:textColor="#FF1744"
+            android:textSize="72sp" />
+
+        <TextView
+            android:id="@+id/floatingWarningText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:gravity="center"
+            android:text="@string/floating_detected"
+            android:textColor="#FFFFFF"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+
+    </LinearLayout>
 
 </FrameLayout>

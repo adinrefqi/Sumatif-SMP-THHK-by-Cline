@@ -16,13 +16,14 @@ if (keystorePropertiesFile.exists()) {
 android {
     namespace = "com.thhk.exambrowser"
     compileSdk = 35
+    buildToolsVersion = "35.0.0"
 
     defaultConfig {
         applicationId = "com.thhk.exambrowser"
         minSdk = 24
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 9
+        versionName = "1.6.0"
     }
 
     signingConfigs {
@@ -31,6 +32,15 @@ android {
             storePassword = keystoreProperties["storePassword"] as String
             keyAlias = keystoreProperties["keyAlias"] as String
             keyPassword = keystoreProperties["keyPassword"] as String
+
+            // 🔴 PERBAIKAN "APK TIDAK BISA DIINSTAL":
+            // Sejak AGP 7.3+, v1 (JAR) signing OTOMATIS DINONAKTIFKAN saat
+            // minSdk >= 24. Banyak perangkat Android 7–9 (terutama
+            // Xiaomi/OPPO/realme/vivo) MENOLAK APK tanpa v1 signature —
+            // muncul error "Aplikasi tidak diinstal" / "Paket file rusak".
+            // Paksa v1 + v2 signing AKTIF agar APK bisa diinstal di semua HP.
+            enableV1Signing = true
+            enableV2Signing = true
         }
     }
 

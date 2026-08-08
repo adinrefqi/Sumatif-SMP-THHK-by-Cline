@@ -628,3 +628,10 @@ module.exports = {
         },
     },
 };
+
+// ============ PEMBAGIAN RUANG & NOMOR UJIAN ============
+// Bagi merata ke Ruang 1/2/3 (kelas tercampur) dan beri nomor ujian berurutan.
+module.exports.studentCredentials.forEach((s, i) => {
+    s.examNumber = String(i + 1).padStart(3, "0");
+    s.room = `Ruang ${(i % 3) + 1}`;
+});

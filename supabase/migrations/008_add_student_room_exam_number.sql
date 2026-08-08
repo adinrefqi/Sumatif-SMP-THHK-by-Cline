@@ -1,0 +1,2 @@
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS room TEXT;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS exam_number TEXT;

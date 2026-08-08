@@ -11,6 +11,8 @@ CREATE TABLE IF NOT EXISTS public.users (
     role TEXT NOT NULL CHECK (role IN ('pengawas', 'siswa')),
     class_name TEXT,
     exam TEXT,
+    room TEXT,
+    exam_number TEXT,
     token TEXT UNIQUE NOT NULL,
     active BOOLEAN DEFAULT TRUE,
     -- State alur ujian (persisten agar tahan terhadap cold start serverless)
@@ -32,6 +34,8 @@ ALTER TABLE public.users ADD COLUMN IF NOT EXISTS exam_key TEXT;
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS token_label TEXT;
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS exam_completed BOOLEAN DEFAULT FALSE;
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS exam_completed_at TIMESTAMPTZ;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS room TEXT;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS exam_number TEXT;
 
 -- ============ TABEL: exam_tokens (token ujian) ============
 CREATE TABLE IF NOT EXISTS public.exam_tokens (

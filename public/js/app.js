@@ -63,6 +63,20 @@ const EVENT_LABELS = {
     aktivitas_mencurigakan: "Aktivitas Mencurigakan",
     token_dibuat: "Token Dibuat",
     token_dihapus: "Token Dihapus",
+    // 🚨 Event dari aplikasi Android Exambrowser
+    keluar_paksa: "🚨 KELUAR PAKSA",
+    floating_app: "🚨 FLOATING DETEKSI",
+    back_diblokir: "Back Diblokir",
+    keluar_domain: "Coba Keluar Domain",
+    kembali_dari_background: "Kembali dari Background",
+    headset_dipakai: "Headset Terdeteksi",
+    dual_screen: "Dual Screen",
+    coba_keluar: "Coba Keluar",
+    pin_salah: "PIN Salah",
+    ssl_error: "SSL Error",
+    navigasi_diblokir: "Navigasi Diblokir",
+    blokir_upload: "Upload Diblokir",
+    kehilangan_fokus: "Kehilangan Fokus",
 };
 
 const SCREENS = ["screen-login", "screen-monitor", "screen-student"];
@@ -110,6 +124,10 @@ const state = {
     monitorTimer: null,
     monitorLoading: false,
     keepaliveTimer: null,
+    // Untuk deteksi event pelanggaran BARU dari aplikasi Android,
+    // lalu tampilkan notifikasi menonjol di dashboard admin/pengawas.
+    seenViolationIds: new Set(),
+    lastViolationToastMs: 0,
 };
 
 /* ------------------------------------------------------------------
@@ -481,7 +499,14 @@ async function handleLogin(e) {
             await enterSupervisor();
         } else {
             state.role = "siswa";
-            state.session = { name: data.name, className: data.className, exam: data.exam, role: data.role };
+            state.session = {
+                name: data.name,
+                className: data.className,
+                exam: data.exam,
+                room: data.room,
+                examNumber: data.examNumber,
+                role: data.role,
+            };
             await enterStudent();
         }
     } catch (err) {
@@ -615,7 +640,7 @@ function renderSiswa(list = []) {
     $("badge-siswa-aktif").textContent = String(activeCount);
 
     if (!list.length) {
-        body.innerHTML = '<tr class="empty-row"><td colspan="6">Belum ada siswa yang masuk.</td></tr>';
+        body.innerHTML = '<tr class="empty-row"><td colspan="8">Belum ada siswa yang masuk.</td></tr>';
         return;
     }
 
@@ -638,7 +663,9 @@ function renderSiswa(list = []) {
             return `
                 <tr>
                     <td><strong>${esc(s.name)}</strong></td>
+                    <td>${esc(s.examNumber || "-")}</td>
                     <td>${esc(s.className || "—")}</td>
+                    <td>${esc(s.room || "-")}</td>
                     <td>${esc(examLabel(s.exam))}</td>
                     <td>${attendance}</td>
                     <td>${status}</td>
@@ -695,6 +722,43 @@ function renderLog(kejadian = []) {
         .join("");
 }
 
+// 🚨 Event dari aplikasi Android yang dianggap pelanggaran serius
+// dan harus memunculkan notifikasi menonjol di dashboard admin/pengawas.
+const VIOLATION_EVENTS = new Set([
+    "keluar_paksa",
+    "floating_app",
+    "dual_screen",
+    "headset_dipakai",
+    "keluar_domain",
+    "navigasi_diblokir",
+    "blokir_upload",
+    "pin_salah",
+    "back_diblokir",
+]);
+
+/**
+ * Deteksi event pelanggaran BARU dari aplikasi Android lalu tampilkan
+ * notifikasi menonjol (alert merah) di Live Monitor admin/pengawas.
+ */
+function checkForViolationAlerts(kejadian = []) {
+    for (const k of kejadian) {
+        if (!VIOLATION_EVENTS.has(k.event)) continue;
+        // Identitas unik untuk mencegah notifikasi berulang.
+        const id = `${k.sessionId || k.id || ""}:${k.event}:${k.at}`;
+        if (state.seenViolationIds.has(id)) continue;
+        state.seenViolationIds.add(id);
+
+        // Batasi notifikasi maksimal 1 per 2 detik agar tidak spam.
+        const now = Date.now();
+        if (now - state.lastViolationToastMs < 2000) continue;
+        state.lastViolationToastMs = now;
+
+        const student = esc(k.name || "Siswa");
+        const label = esc(eventLabel(k.event));
+        showToast(`🚨 ${student} — ${label}`);
+    }
+}
+
 function renderBeritaAcara(list = []) {
     const body = $("monitor-ba-body");
     $("badge-ba").textContent = String(list.length);
@@ -747,6 +811,8 @@ async function loadMonitor() {
         renderSiswa(data.siswa);
         renderLog(data.kejadian);
         renderBeritaAcara(data.beritaAcara);
+        // 🚨 Notifikasi pelanggaran dari aplikasi Android di dashboard
+        checkForViolationAlerts(data.kejadian);
         setMonitorFreshness(true);
     } catch (err) {
         if (err.status === 401 || err.status === 403) {
@@ -950,7 +1016,7 @@ function renderStudentHead() {
 
     const label = examLabel(state.session.exam || state.examKey);
     $("stud-name").textContent = state.session.name;
-    $("stud-meta").textContent = `${state.session.className || "—"} • ${label}`;
+    $("stud-meta").textContent = `${state.session.examNumber || "-"} / ${state.session.className || "-"} / ${state.session.room || "-"} / ${label}`;
     $("stud-subtitle").textContent = `Penilaian Sumatif • ${label}`;
 
     updateConnectionStatus();
@@ -988,6 +1054,7 @@ function openPresensiModal() {
     $("presensi-name-2").textContent = state.session.name;
     $("presensi-class").textContent = state.session.className || "—";
     $("presensi-exam").textContent = examLabel(state.session.exam || state.examKey);
+    $("presensi-room").value = state.session.room || "";
 
     openModal("modal-presensi");
     setTimeout(() => $("presensi-room") && $("presensi-room").focus(), 60);
@@ -1109,7 +1176,7 @@ async function renderPdfViewer() {
 
     const label = examLabel(state.examKey);
     $("stud-subtitle").textContent = `Soal: ${label}`;
-    $("stud-meta").textContent = `${state.session.className || "—"} • Token valid`;
+    $("stud-meta").textContent = `${state.session.examNumber || "-"} / ${state.session.className || "-"} / ${state.session.room || "-"} / Token valid`;
 
     $("student-body").innerHTML = `
         <div class="viewer-shell">
@@ -1144,7 +1211,6 @@ async function renderPdfViewer() {
                             <path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/>
                         </svg>
                     </button>
-
                 </div>
             </div>
 
@@ -1401,7 +1467,6 @@ function updateConnectionStatus(online = navigator.onLine) {
     indicator.textContent = connected ? "Online" : "Offline";
 }
 
-
 /* ---------- Selesai ujian ---------- */
 function openFinishModal() {
     openModal("modal-finish");
@@ -1513,6 +1578,8 @@ async function bootstrap() {
                 name: s.name,
                 className: s.className,
                 exam: s.exam,
+                room: s.room,
+                examNumber: s.examNumber,
                 role: s.role,
                 attendanceDone: s.attendanceDone,
                 tokenValid: s.tokenValid,

@@ -6,16 +6,15 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
-    <!-- Dibutuhkan untuk deteksi overlay (Lapis 3 anti floating apps) -->
-    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
-    <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS"
-        tools:ignore="ProtectedPermissions" />
-
-    <!-- Alarm keras saat pelanggaran -->
+    <!-- Feedback getar saat ada peringatan -->
     <uses-permission android:name="android.permission.VIBRATE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!--
+        Izin normal untuk blokir notifikasi (Do Not Disturb).
+        Bukan izin sensitif - tidak memicu Google Play Protect.
+        Dipakai agar notifikasi tidak muncul saat ujian berlangsung.
+    -->
+    <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
 
     <application
         android:allowBackup="false"
@@ -29,15 +28,17 @@
         <!--
             Aktivitas utama: WebView kiosk ujian.
             - exported=true karena menjadi launcher.
-            - WindowManager.LayoutParams ditangani di dalam kode
-              (FLAG_SECURE + immersive + keep screen on).
+            - FLAG_SECURE + immersive + Lock Task Mode ditangani di dalam kode.
+            - lockTaskMode="if_whitelisted" mendukung mode kiosk via Screen Pinning.
         -->
         <activity
             android:name=".MainActivity"
             android:label="@string/app_name"
             android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|keyboard|smallestScreenSize|density|uiMode"
+            android:enableOnBackInvokedCallback="false"
             android:exported="true"
             android:launchMode="singleTask"
+            android:lockTaskMode="if_whitelisted"
             android:theme="@style/Theme.Exambrowser"
             android:taskAffinity="com.thhk.exambrowser.main"
             android:windowSoftInputMode="adjustResize">
@@ -46,35 +47,6 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
-        <!--
-            AccessibilityService: inti keamanan.
-            - onAccessibilityEvent memonitor TYPE_WINDOW_STATE_CHANGED
-              (Lapis 1 anti floating apps & anti keluar app)
-            - TYPE_WINDOWS_CHANGED (Lapis 2 deteksi overlay kecil)
-        -->
-        <service
-            android:name=".security.ExamAccessibilityService"
-            android:exported="false"
-            android:label="@string/accessibility_service_label"
-            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
-            <intent-filter>
-                <action android:name="android.accessibilityservice.AccessibilityService" />
-            </intent-filter>
-            <meta-data
-                android:name="android.accessibilityservice"
-                android:resource="@xml/accessibility_service_config" />
-        </service>
-
-        <!-- Foreground service anti-keluar (menahan app saat ditekan Recent/Home) -->
-        <service
-            android:name=".security.ExamGuardService"
-            android:exported="false"
-            android:foregroundServiceType="specialUse">
-            <property
-                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="Exam security guard: prevents exiting the exam app and blocks floating apps during exams" />
-        </service>
 
     </application>
 

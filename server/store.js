@@ -46,7 +46,7 @@ class MemoryStore {
     }
 
     /* ---------------- Sesi ---------------- */
-    createSession({ username, name, role, className, exam }) {
+    createSession({ username, name, role, className, exam, room, examNumber }) {
         const sessionId = generateId("ses");
         const session = {
             id: sessionId,
@@ -56,6 +56,8 @@ class MemoryStore {
             role,
             className: className || null,
             exam: exam || null,
+            room: room || null,
+            examNumber: examNumber || null,
             createdAt: nowISO(),
         };
         this.sessions.set(session.token, session);
@@ -321,7 +323,7 @@ class SupabaseStore {
     }
 
     /* ---------------- Sesi ---------------- */
-    async createSession({ username, name, role, className, exam }) {
+    async createSession({ username, name, role, className, exam, room, examNumber }) {
         const token = crypto.randomBytes(32).toString("hex");
 
         const payload = {
@@ -330,6 +332,8 @@ class SupabaseStore {
             role,
             class_name: className || null,
             exam: exam || null,
+            room: room || null,
+            exam_number: examNumber || null,
             token,
             active: true,
         };
@@ -351,6 +355,8 @@ class SupabaseStore {
             role: data.role,
             className: data.class_name,
             exam: data.exam,
+            room: data.room || null,
+            examNumber: data.exam_number || null,
             createdAt: data.created_at || nowISO(),
         };
         this.memory.sessions.set(session.token, session);
@@ -366,6 +372,8 @@ class SupabaseStore {
             role: data.role,
             className: data.class_name,
             exam: data.exam,
+            room: data.room || null,
+            examNumber: data.exam_number || null,
             attendanceDone: data.attendance_done || false,
             beritaAcaraDone: data.berita_acara_done || false,
             tokenValid: data.token_valid || false,
@@ -841,6 +849,8 @@ class SupabaseStore {
                     name: u.name,
                     className: u.class_name,
                     exam: u.exam,
+                    room: u.room || null,
+                    examNumber: u.exam_number || null,
                     attendance: hadirSet.has(u.id),
                     examCompleted: Boolean(u.exam_completed),
                     isActive,

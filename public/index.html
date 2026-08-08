@@ -229,7 +229,9 @@
                                 <thead>
                                     <tr>
                                         <th>Siswa</th>
+                                        <th>No. Ujian</th>
                                         <th>Kelas</th>
+                                        <th>Ruang</th>
                                         <th>Mapel</th>
                                         <th>Presensi</th>
                                         <th>Status</th>
@@ -238,7 +240,7 @@
                                 </thead>
                                 <tbody id="monitor-siswa-body">
                                     <tr class="empty-row">
-                                        <td colspan="6">Belum ada siswa yang masuk.</td>
+                                        <td colspan="8">Belum ada siswa yang masuk.</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -456,8 +458,7 @@
                                 <path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6" />
                                 <path d="M9 9h.01M15 9h.01" />
                             </svg>
-                            <input type="text" id="presensi-room" placeholder="contoh: Ruang 9A" autocomplete="off"
-                                required />
+                            <input type="text" id="presensi-room" autocomplete="off" readonly required />
                         </div>
                     </div>
                     <div class="presensi-check">

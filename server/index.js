@@ -163,6 +163,8 @@ app.post("/api/login", async (req, res) => {
                 role: "siswa",
                 className: found.className,
                 exam: found.exam,
+                room: found.room,
+                examNumber: found.examNumber,
             });
             setSessionCookie(res, session.token);
             track({ session, sessionToken: session.token }, "login_siswa", `${found.name} (${found.className}) masuk`);
@@ -172,6 +174,8 @@ app.post("/api/login", async (req, res) => {
                 name: found.name,
                 className: found.className,
                 exam: found.exam,
+                room: found.room,
+                examNumber: found.examNumber,
             });
         }
 
@@ -189,6 +193,8 @@ app.get("/api/session", requireSession(null), (req, res) => {
         username: req.session.username,
         className: req.session.className || null,
         exam: req.session.exam || null,
+        room: req.session.room || null,
+        examNumber: req.session.examNumber || null,
         attendanceDone: req.session.attendanceDone || false,
         beritaAcaraDone: req.session.beritaAcaraDone || false,
         tokenValid: req.session.tokenValid || false,
@@ -239,9 +245,9 @@ app.post("/api/presensi", requireSession("siswa"), async (req, res) => {
         return res.status(403).json({ error: "Anda telah menyelesaikan ujian ini." });
     }
 
-    const { room } = req.body || {};
-    if (!room || !String(room).trim()) {
-        return res.status(400).json({ error: "Ruang ujian wajib diisi." });
+    const room = req.session.room;
+    if (!room) {
+        return res.status(409).json({ error: "Pembagian ruang belum tersedia. Silakan login ulang." });
     }
 
     const sudah = await store.getAttendanceBySession(req.session.id);
@@ -257,7 +263,7 @@ app.post("/api/presensi", requireSession("siswa"), async (req, res) => {
             className: req.session.className,
             examKey: req.session.exam,
             examTitle: examTitle(req.session.exam),
-            room: String(room).trim(),
+            room,
         });
         req.session.attendanceDone = true;
         try {

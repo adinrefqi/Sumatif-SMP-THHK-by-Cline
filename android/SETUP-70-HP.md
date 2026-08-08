@@ -1,7 +1,7 @@
 # 📱 Panduan Setup 70 HP Siswa — Exambrowser THHK
 
 > Dokumen ini untuk tim IT/pengawas SMP Tunas Hidup Harapan Kita.
-> Panduan instalasi APK `Exambrowser THHK` di 70 HP pribadi siswa beserta aktivasi izin keamanan.
+> Panduan instalasi APK `Exambrowser THHK` di 70 HP pribadi siswa.
 
 ---
 
@@ -34,36 +34,26 @@
 3. Tunggu hingga selesai → tap **Selesai** (jangan langsung Buka dulu).
 4. Pastikan ikon **"Exambrowser THHK"** muncul di layar HP.
 
+> ✅ **Tanpa langkah aktivasi izin khusus!** Aplikasi v1.2.0+ menggunakan **Lock Task Mode (Screen Pinning)** — fitur resmi Android untuk mode kiosk. Tidak perlu izin Aksesibilitas, Overlay, atau Akses Penggunaan Aplikasi.
+
 ---
 
-## 3. Aktivasi Keamanan (WAJIB — 3 Izin)
+## 3. Cara Mengaktifkan Mode Kiosk (Sekali saat Setup)
 
-> Langkah ini paling penting. Tanpa izin ini, aplikasi tetap berjalan TETAPI keamanan anti-keluar & anti-floating TIDAK aktif.
+Aplikasi otomatis mengaktifkan **Screen Pinning (Lock Task Mode)** saat dibuka. Pada beberapa perangkat, pengguna perlu mengaktifkan Screen Pinning satu kali di setelan:
 
-### A. Buka Aplikasi & Atur PIN (sekali saja)
-1. Buka **Exambrowser THHK**.
-2. Akan muncul dialog **"⚠️ Pengaturan Keamanan Diperlukan"** → tap **Buka Pengaturan**.
-3. Buka tabel di bawah untuk aktivasi izin.
-
-### B. Aktivasi 3 Izin
-
-| # | Izin | Cara Aktivasi | Lokasi Menu |
-|---|------|---------------|-------------|
-| 1 | **Layanan Aksesibilitas** | Setelan → Aksesibilitas → **"Keamanan Ujian Exambrowser THHK"** → aktifkan → **OK** | Setelan → Aksesibilitas |
-| 2 | **Muncul di atas aplikasi lain** (Overlay) | Setelan → Aplikasi → **Exambrowser THHK** → **Muncul di atas aplikasi lain** → aktifkan | Setelan → Aplikasi → Exambrowser THHK |
-| 3 | **Akses Penggunaan Aplikasi** (opsional, untuk deteksi lebih kuat) | Setelan → Keamanan/Privasi → **Akses penggunaan aplikasi** → **Exambrowser THHK** → aktifkan | Setelan → Keamanan → Akses penggunaan |
+1. Buka **Setelan → Keamanan → Screen pinning / Kunci tampilan** (nama menu berbeda per merk).
+2. Aktifkan **"Screen pinning" / "Kunci tampilan"**.
+3. Saat aplikasi ujian terbuka, ikon pin keamanan tidak perlu ditekan — aplikasi mengaktifkannya otomatis.
 
 > **Catatan per merk** (menu bisa berbeda):
-> - **Xiaomi/Redmi/Poco**: Setelan → Aplikasi → Kelola aplikasi → Exambrowser THHK → Izin lain → aktifkan "Tampil di atas aplikasi lain" & "Akses penggunaan". Aktifkan juga **"Tampilkan di latar"** di Setelan → Baterai → Preferensi aplikasi.
-> - **Samsung**: Setelan → Aplikasi → Exambrowser THHK → Izin → "Muncul di atas aplikasi lain". Aksesibilitas di Setelan → Aksesibilitas → Layanan terinstal.
-> - **OPPO/realme**: Setelan → Aplikasi → Exambrowser THHK → "Muncul di atas aplikasi lain". Untuk penggunaan: Setelan → Keamanan → Lainnya → Akses penggunaan aplikasi.
-> - **vivo**: Setelan → Aplikasi → Manajemen aplikasi → Exambrowser THHK → Izin → "Tampil di atas aplikasi lain".
-> - **Huawei**: Setelan → Aplikasi → Aplikasi → Exambrowser THHK → Izin → "Tampilkan di atas aplikasi lain".
+> - **Xiaomi/Redmi/Poco**: Setelan → Layar beranda → Kunci tampilan
+> - **Samsung**: Setelan → Keamanan dan privasi → Izin lainnya → Kunci tampilan / Pin layar
+> - **OPPO/realme**: Setelan → Keamanan → Kunci tampilan
+> - **vivo**: Setelan → Keamanan/layar kunci → Kunci tampilan
+> - **Huawei**: Setelan → Keamanan & privasi → Lainnya → Kunci tampilan
 
-### C. Verifikasi
-- Buka kembali **Exambrowser THHK**.
-- Jika dialog keamanan tidak muncul lagi → ✅ semua izin aktif.
-- Jika masih muncul → ada izin yang belum aktif, ulangi langkah B.
+> Jika Screen Pinning tidak diaktifkan, aplikasi tetap berjalan normal (fullscreen + anti-screenshot + PIN admin), hanya fitur kunci penuh yang memerlukan dukungan perangkat.
 
 ---
 
@@ -72,13 +62,10 @@
 | Uji | Cara | Hasil yang Diharapkan |
 |-----|------|----------------------|
 | Buka aplikasi | Tap ikon Exambrowser THHK | Portal ujian terbuka, tampil fullscreen tanpa status bar |
-| Tekan Home | Tekan tombol Home | Aplikasi langsung kembali ke portal + alarm berbunyi (jika aksesibilitas aktif) |
-| Buka aplikasi lain | Coba buka WhatsApp/Chrome | Kembali ke portal + alarm + tercatat di Live Monitor |
 | Screenshot | Tekan tombol power + volume bawah | Layar hitam (screenshot diblokir) |
 | Back | Tekan tombol Back | Muncul dialog PIN Admin |
 | Notifikasi | Geser dari atas | Nav bar/status bar tersembunyi (immersive) |
-
-> Jika uji coba gagal (misal bisa keluar aplikasi), **cek ulang izin Aksesibilitas di Langkah 3**.
+| Anti keluar aplikasi | Tekan Home/Recent (jika Screen Pinning aktif) | Aplikasi tetap di layar (terkunci) |
 
 ---
 
@@ -86,7 +73,7 @@
 
 | PIN | Nilai Default | Fungsi |
 |-----|---------------|--------|
-| **PIN Admin** | `1234` | Keluar aplikasi, buka pengaturan, ubah URL portal, nonaktifkan mode ujian |
+| **PIN Admin** | `1234` | Keluar aplikasi, buka pengaturan, ubah URL portal |
 | **PIN Guru** | `5678` | (Cadangan — dapat dipakai untuk menyelesaikan ujian) |
 
 > ⚠️ **Ganti PIN sebelum ujian!** Cara ganti PIN saat ini hanya melalui kode (sumber terbuka). Untuk keperluan sekolah, hubungi tim IT untuk mengubah default PIN di `Prefs.kt` lalu build ulang APK jika ingin PIN unik per perangkat.
@@ -100,11 +87,11 @@
    - Pastikan portal login terbuka.
    - Pengawas memverifikasi di **Live Monitor** bahwa semua siswa sudah login.
 2. **Selama ujian**:
-   - Siswa **tidak boleh menekan Home/Recent/Back** — aplikasi akan membunyikan alarm.
-   - Jika alarm berbunyi, pengawas mendekati siswa dan memeriksa.
-   - Semua pelanggaran tercatat real-time di **Live Monitor** (`/monitor`).
+   - Siswa **tidak boleh menekan Back** — muncul dialog PIN.
+   - Jika siswa keluar aplikasi, perilaku dicatat di server Live Monitor.
+   - Semua aktivitas mencurigakan tercatat real-time di **Live Monitor** (`/monitor`).
 3. **Selesai ujian**:
-   - Pengawas memasukkan **PIN Admin** → pilih **"Nonaktifkan Mode Ujian"** atau **"Keluar Aplikasi"**.
+   - Pengawas memasukkan **PIN Admin** → pilih **"Keluar Aplikasi"**.
 
 ---
 
@@ -113,11 +100,9 @@
 | Masalah | Solusi |
 |---------|--------|
 | APK tidak bisa diinstal | Aktifkan "Instal dari sumber tidak dikenal" di Setelan → Keamanan |
-| Dialog keamanan terus muncul | Ada izin yang belum aktif — cek Aksesibilitas & Overlay |
-| Aplikasi bisa keluar saat tekan Home | Layanan Aksesibilitas belum aktif — aktifkan di Setelan → Aksesibilitas |
-| Alarm tidak berbunyi | Cek volume & mode getar HP |
+| Aplikasi bisa keluar saat tekan Home | Aktifkan **Screen Pinning** di setelan perangkat (lihat Langkah 3) |
 | Portal tidak terbuka | Cek koneksi internet; pastikan URL portal benar (default: `https://portal-sumatif-thhk.vercel.app`) |
-| Layar bisa di-screenshot | Mode ujian belum aktif / FLAG_SECURE tidak jalan — pastikan versi APK terbaru |
+| Layar bisa di-screenshot | FLAG_SECURE tidak jalan pada perangkat tertentu — pastikan versi APK terbaru (v1.2.0+) |
 
 ---
 
@@ -138,8 +123,8 @@
 
 ```
 [ ] Semua HP sudah terinstall Exambrowser THHK
-[ ] Semua HP sudah aktivasi 3 izin (Aksesibilitas, Overlay, Akses penggunaan)
-[ ] Uji coba Home/Screenshot/Back sukses di semua HP
+[ ] Semua HP sudah mengaktifkan Screen Pinning (jika mendukung)
+[ ] Uji coba Screenshot/Back sukses di semua HP
 [ ] Koneksi internet siswa stabil
 [ ] PIN Admin & Guru sudah disepakati tim pengawas
 [ ] Live Monitor dibuka di ruang pengawas

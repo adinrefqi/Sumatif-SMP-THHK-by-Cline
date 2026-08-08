@@ -1,12 +1,20 @@
 package com.thhk.exambrowser
 
 import android.annotation.SuppressLint
+import android.app.ActivityManager
+import android.app.NotificationManager
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
+import android.media.AudioManager
 import android.net.Uri
 import android.net.http.SslError
+import android.os.BatteryManager
 import android.os.Build
 import android.os.Bundle
-import android.provider.Settings
+import android.os.Handler
+import android.os.Looper
 import android.view.Gravity
 import android.view.View
 import android.view.WindowManager
@@ -27,19 +35,23 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import com.thhk.exambrowser.databinding.ActivityMainBinding
-import com.thhk.exambrowser.security.ExamAccessibilityService
-import com.thhk.exambrowser.security.ExamGuardService
+import com.thhk.exambrowser.databinding.DialogSecurityMenuBinding
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 /**
  * Aktivitas utama: WebView kiosk portal ujian.
  *
- * Keamanan:
+ * Keamanan (tanpa izin sensitif - aman dari Google Play Protect):
  * - FLAG_SECURE: anti screenshot & rekam layar
  * - Immersive fullscreen: sembunyikan status bar & nav bar
- * - Back ditekan -> wajib PIN admin
- * - Blokir navigasi keluar domain portal
- * - Blokir file chooser / unduhan / copy-paste
- * - Start foreground service + AccessibilityService
+ * - Lock Task Mode (Screen Pinning): fitur resmi Android untuk mode kiosk.
+ * - Anti floating apps: deteksi kehilangan fokus -> alarm + layar hitam + force close
+ * - Blokir notifikasi: Do Not Disturb (izin ACCESS_NOTIFICATION_POLICY, normal)
+ * - Jam & baterai di halaman ujian
+ * - Deteksi headset & dual layar
+ * - Reset portal saat app kembali fokus (fitur 4)
  */
 class MainActivity : AppCompatActivity() {
 
@@ -50,9 +62,42 @@ class MainActivity : AppCompatActivity() {
 
     private var backPressStartMs: Long = 0
 
+    /**
+     * Flag untuk mencegah re-lock saat pengguna sedang keluar/menonaktifkan mode ujian.
+     * Tanpa flag ini, callback onResume/onWindowFocusChanged akan memanggil
+     * startLockTask() lagi → aplikasi "keluar tapi balik lagi".
+     */
+    private var isExiting = false
+
+    /**
+     * Flag untuk reset portal saat app kembali from background (fitur 4).
+     */
+    private var wasInBackground = false
+
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private var clockRunnable: Runnable? = null
+
+    private var lastHeadsetWarningMs: Long = 0
+    private var lastDualScreenWarningMs: Long = 0
+
     companion object {
         const val PORTAL_HOST = "portal-sumatif-thhk.vercel.app"
-        const val ACTION_FINISH_EXAM = "com.thhk.exambrowser.ACTION_FINISH_EXAM"
+    }
+
+    /* ---------------------------------------------------------
+     * BroadcastReceiver untuk deteksi headset (fitur 30)
+     * --------------------------------------------------------- */
+    private val headsetReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent == null) return
+            when (intent.action) {
+                Intent.ACTION_HEADSET_PLUG -> {
+                    if (!isExiting && Prefs.isExamMode(this@MainActivity)) {
+                        handleHeadsetDetected()
+                    }
+                }
+            }
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -67,21 +112,160 @@ class MainActivity : AppCompatActivity() {
             WindowManager.LayoutParams.FLAG_SECURE
         )
 
-        // Optimasi visual + nonaktifkan animasi (mencegah kelemahan screenshot)
+        // ⏰ Layar tetap menyala selama aplikasi terbuka (tanpa izin tambahan)
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+
+        // ☀️ Set kecerahan layar ke 60% (berlaku untuk window aplikasi ini,
+        // tidak memerlukan izin WRITE_SETTINGS)
+        val layoutParams = window.attributes
+        layoutParams.screenBrightness = 0.6f
+        window.attributes = layoutParams
+
+        // Optimasi visual
         window.setBackgroundDrawableResource(R.color.window_background)
 
         setupWebView()
         setupImmersiveMode()
         setupTouchBlockers()
 
-        // Mulai foreground service penjaga ujian
-        ExamGuardService.start(this)
+        // 🔒 Mode kiosk: Lock Task Mode (Screen Pinning) - fitur resmi Android.
+        enterLockTaskMode()
 
-        // Cek syarat keamanan (aksesibilitas & overlay) - tampilkan peringatan bila belum
-        checkSecurityRequirements()
+        // 🕐 Jam + baterai di halaman ujian (fitur 23 & 24)
+        startClockAndBattery()
+
+        // 🚫 Blokir notifikasi: aktifkan Do Not Disturb (fitur blokir notifikasi)
+        enableNotificationBlock()
+
+        // 🎧 Deteksi headset (fitur 30)
+        registerHeadsetReceiver()
+
+        // ⏻ Tombol OFF: matikan app via PIN
+        setupPowerOffButton()
 
         // Muat portal
         loadPortal()
+    }
+
+    /* ---------------------------------------------------------
+     * Tombol OFF (pengganti tombol back/swipe back)
+     * --------------------------------------------------------- */
+    private fun setupPowerOffButton() {
+        binding.powerOffButton.setOnClickListener {
+            if (!isExiting) {
+                showPinDialog(
+                    title = getString(R.string.pin_admin_title),
+                    hint = getString(R.string.pin_admin_hint),
+                    onSuccess = { openSettings() }
+                )
+            }
+        }
+    }
+
+    /* ---------------------------------------------------------
+     * Jam & Baterai (fitur 23 & 24)
+     * --------------------------------------------------------- */
+    private fun startClockAndBattery() {
+        updateClockAndBattery()
+        clockRunnable = object : Runnable {
+            override fun run() {
+                updateClockAndBattery()
+                mainHandler.postDelayed(this, 1000)
+            }
+        }
+        mainHandler.postDelayed(clockRunnable!!, 1000)
+    }
+
+    private fun updateClockAndBattery() {
+        try {
+            // Jam (fitur 24) - format HH:mm agar kecil di chip pojok
+            val fmt = SimpleDateFormat("HH:mm", Locale.getDefault())
+            binding.examClock.text = fmt.format(Date())
+
+            // Baterai (fitur 23)
+            val bm = getSystemService(Context.BATTERY_SERVICE) as BatteryManager
+            val level = bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
+            val status = bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_STATUS)
+            val charging = status == BatteryManager.BATTERY_STATUS_CHARGING ||
+                status == BatteryManager.BATTERY_STATUS_FULL
+            binding.examBattery.text = if (charging) "⚡$level%" else "$level%"
+        } catch (e: Exception) {
+            // Abaikan
+        }
+    }
+
+    /* ---------------------------------------------------------
+     * Blokir Notifikasi (Do Not Disturb)
+     * --------------------------------------------------------- */
+    private fun enableNotificationBlock() {
+        try {
+            val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            if (nm.isNotificationPolicyAccessGranted) {
+                // Aktifkan Do Not Disturb total: blokir semua notifikasi & suara
+                nm.setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_NONE)
+            }
+        } catch (e: Exception) {
+            // Abaikan - beberapa perangkat tidak mendukung
+        }
+    }
+
+    private fun disableNotificationBlock() {
+        try {
+            val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            if (nm.isNotificationPolicyAccessGranted) {
+                nm.setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_ALL)
+            }
+        } catch (e: Exception) {
+            // Abaikan
+        }
+    }
+
+    /* ---------------------------------------------------------
+     * Deteksi Headset (fitur 30)
+     * --------------------------------------------------------- */
+    private fun registerHeadsetReceiver() {
+        val filter = IntentFilter()
+        filter.addAction(Intent.ACTION_HEADSET_PLUG)
+        registerReceiver(headsetReceiver, filter)
+    }
+
+    private fun handleHeadsetDetected() {
+        val now = System.currentTimeMillis()
+        if (now - lastHeadsetWarningMs < 10000) return
+        lastHeadsetWarningMs = now
+
+        TrackEventTask(this, "headset_dipakai", "Headset terdeteksi saat ujian").execute()
+        AlarmUtils.playAlarmAndForceClose(this)
+    }
+
+    /* ---------------------------------------------------------
+     * Mode kiosk: Lock Task Mode (Screen Pinning)
+     * --------------------------------------------------------- */
+    private fun enterLockTaskMode() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            val am = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+            if (!am.isInLockTaskMode) {
+                try {
+                    startLockTask()
+                } catch (e: Exception) {
+                    // Beberapa perangkat/ROM tidak mendukung - lanjutkan tanpa pinning.
+                    // Immersive + FLAG_SECURE tetap aktif.
+                }
+            }
+        }
+    }
+
+    private fun exitLockTaskMode() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            try {
+                val am = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+                if (am.isInLockTaskMode) {
+                    stopLockTask()
+                }
+            } catch (e: Exception) {
+                // Abaikan
+            }
+        }
     }
 
     /* ---------------------------------------------------------
@@ -106,10 +290,6 @@ class MainActivity : AppCompatActivity() {
         settings.textZoom = 100
         settings.loadWithOverviewMode = true
         settings.useWideViewPort = true
-
-        // Hapus data sesi lama bila ada (bersihkan saat pertama kali)
-        // Catatan: jangan bersihkan CookieManager karena sesi login siswa
-        // disimpan di cookie WebView.
 
         // Cookie: izinkan third-party cookies agar sesi portal berfungsi
         CookieManager.getInstance().setAcceptCookie(true)
@@ -155,8 +335,6 @@ class MainActivity : AppCompatActivity() {
                 fileChooserParams: FileChooserParams?
             ): Boolean {
                 // 🔒 Blokir upload file (anti bocor soal keluar).
-                // Wajib panggil onReceiveValue(null) agar WebView tidak terkunci
-                // menunggu hasil file chooser. Delay singkat biar JS sempat berjalan.
                 this@MainActivity.filePathCallback = filePathCallback
                 webView?.postDelayed({
                     this@MainActivity.filePathCallback?.onReceiveValue(null)
@@ -164,7 +342,6 @@ class MainActivity : AppCompatActivity() {
                 }, 200)
                 // Kirim event pelanggaran
                 TrackEventTask(this@MainActivity, "blokir_upload", "Coba upload file di blokir").execute()
-                AlarmManager.trigger(this@MainActivity, binding.alarmFlashOverlay)
                 return true
             }
 
@@ -175,8 +352,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * Cegah navigasi keluar domain portal. Izin: halaman di dalam portal
-     * dan target _blank tetap dibuka di WebView (bukan browser luar).
+     * Cegah navigasi keluar domain portal.
      */
     private fun handleUrlNavigation(url: String): Boolean {
         val uri = try {
@@ -190,19 +366,17 @@ class MainActivity : AppCompatActivity() {
         // Blokir semua protokol non-http(s)
         if (uri.scheme != "https" && uri.scheme != "http") {
             TrackEventTask(this, "navigasi_diblokir", "Protokol: ${uri.scheme} - $url").execute()
-            AlarmManager.trigger(this, binding.alarmFlashOverlay)
             return true
         }
 
         // Izinkan host portal utama (termasuk subdomain Vercel)
         val allowed = host == PORTAL_HOST || host.endsWith(".vercel.app") ||
-            host.endsWith(".supabase.co") || // PDF proxy tidak langsung, tapi amankan
+            host.endsWith(".supabase.co") ||
             host.contains("thhk")
 
         if (!allowed) {
-            // ⚠️ Coba keluar ke domain lain - blokir + alarm + kirim ke Live Monitor
+            // ⚠️ Coba keluar ke domain lain - blokir + kirim ke Live Monitor
             TrackEventTask(this, "keluar_domain", "Coba buka: $url").execute()
-            AlarmManager.trigger(this, binding.alarmFlashOverlay)
             return true
         }
 
@@ -244,35 +418,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     /* ---------------------------------------------------------
-     * Keamanan: cek aksesibilitas & overlay
-     * --------------------------------------------------------- */
-    private fun checkSecurityRequirements() {
-        val needsAccessibility = !SecurityUtils.isAccessibilityServiceEnabled(
-            this,
-            ExamAccessibilityService::class.java
-        )
-        val needsOverlay = !Settings.canDrawOverlays(this)
-
-        if (needsAccessibility || needsOverlay) {
-            AlertDialog.Builder(this)
-                .setTitle("⚠️ Pengaturan Keamanan Diperlukan")
-                .setMessage(
-                    "Agar ujian berjalan aman, aktifkan:\n\n" +
-                        "1. Layanan Aksesibilitas \"${getString(R.string.accessibility_service_label)}\"\n" +
-                        (if (needsOverlay) "2. Izin \"Muncul di atas aplikasi lain\"\n" else "")
-                )
-                .setPositiveButton("Buka Pengaturan") { _, _ ->
-                    // Buka halaman aksesibilitas
-                    val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
-                    startActivity(intent)
-                }
-                .setNegativeButton("Nanti", null)
-                .setCancelable(false)
-                .show()
-        }
-    }
-
-    /* ---------------------------------------------------------
      * Muat portal
      * --------------------------------------------------------- */
     private fun loadPortal() {
@@ -280,31 +425,30 @@ class MainActivity : AppCompatActivity() {
         webView.loadUrl(url)
     }
 
+    /**
+     * Fitur 4: Reset/refresh portal saat app kembali dari background.
+     */
+    private fun resetExamIfReturned() {
+        if (wasInBackground && !isExiting && Prefs.isExamMode(this)) {
+            wasInBackground = false
+            webView.reload()
+            TrackEventTask(this, "kembali_dari_background", "App kembali fokus, portal di-reset").execute()
+        }
+    }
+
     /* ---------------------------------------------------------
-     * Back button -> PIN admin (blokir keluar)
+     * Back button -> MATIKAN TOTAL (satu-satunya keluar: tombol OFF ⏻)
      * --------------------------------------------------------- */
+    @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
-        // Kunci: back dari halaman pertama -> minta PIN admin
-        if (webView.canGoBack()) {
-            webView.goBack()
-            return
+        // 🚫 Back/swipe back DINONAKTIFKAN SEPENUHNYA.
+        // Tidak bisa keluar aplikasi dengan tombol back.
+        // Satu-satunya cara keluar: tombol OFF ⏻ → PIN.
+        if (!isExiting && Prefs.isExamMode(this)) {
+            TrackEventTask(this, "back_diblokir", "Tombol back ditekan, tidak berfungsi").execute()
+            Toast.makeText(this, "Gunakan tombol OFF untuk keluar", Toast.LENGTH_SHORT).show()
         }
-
-        val now = System.currentTimeMillis()
-        if (now - backPressStartMs < 1000) {
-            // 2x back cepat = tetap minta PIN (bukan keluar)
-        }
-        backPressStartMs = now
-
-        // Track percobaan keluar
-        TrackEventTask(this, "coba_keluar", "Back ditekan saat ujian").execute()
-        AlarmManager.trigger(this, binding.alarmFlashOverlay)
-
-        showPinDialog(
-            title = getString(R.string.pin_admin_title),
-            hint = getString(R.string.pin_admin_hint),
-            onSuccess = { openSettings() }
-        )
+        // JANGAN panggil super - blokir back button total
     }
 
     /* ---------------------------------------------------------
@@ -338,9 +482,8 @@ class MainActivity : AppCompatActivity() {
                 if (ok) {
                     onSuccess()
                 } else {
-                    // PIN salah -> alarm + track
+                    // PIN salah -> track
                     TrackEventTask(this, "pin_salah", "Percobaan PIN salah").execute()
-                    AlarmManager.trigger(this, binding.alarmFlashOverlay)
                     Toast.makeText(this, R.string.pin_wrong, Toast.LENGTH_SHORT).show()
                 }
             }
@@ -350,32 +493,35 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun openSettings() {
-        AlertDialog.Builder(this)
-            .setTitle("Menu Keamanan")
-            .setItems(
-                arrayOf(
-                    "Buka Pengaturan (Accessibility/Overlay)",
-                    "Ubah URL Portal",
-                    "Nonaktifkan Mode Ujian",
-                    "Keluar Aplikasi"
-                )
-            ) { _, which ->
-                when (which) {
-                    0 -> {
-                        val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
-                        startActivity(intent)
-                    }
-                    1 -> showPortalUrlDialog()
-                    2 -> {
-                        Prefs.setExamMode(this, false)
-                        ExamGuardService.stop(this)
-                        Toast.makeText(this, "Mode ujian dinonaktifkan", Toast.LENGTH_SHORT).show()
-                    }
-                    3 -> finishAffinity()
-                }
-            }
-            .setNegativeButton("Tutup", null)
-            .show()
+        val binding = DialogSecurityMenuBinding.inflate(layoutInflater)
+        val dialog = AlertDialog.Builder(this)
+            .setView(binding.root)
+            .setCancelable(true)
+            .create()
+
+        binding.menuChangeUrl.setOnClickListener {
+            dialog.dismiss()
+            showPortalUrlDialog()
+        }
+
+        binding.menuExitApp.setOnClickListener {
+            dialog.dismiss()
+            // 🔒 Tandai sedang keluar SEBELUM lepas lock task,
+            // mainkan alarm 95%, lalu force close paksa.
+            isExiting = true
+            Prefs.setExamMode(this, false)
+            exitLockTaskMode()
+            disableNotificationBlock()
+            finishAffinity()
+            // 📢 Alarm 95% + force close otomatis
+            AlarmUtils.playAlarmAndForceClose(this)
+        }
+
+        binding.menuClose.setOnClickListener {
+            dialog.dismiss()
+        }
+
+        dialog.show()
     }
 
     private fun showPortalUrlDialog() {
@@ -400,8 +546,36 @@ class MainActivity : AppCompatActivity() {
     }
 
     /* ---------------------------------------------------------
+     * Deteksi dual layar (fitur 12) & anti split-screen
+     * --------------------------------------------------------- */
+    private fun checkDualScreen() {
+        try {
+            if (isInMultiWindowMode) {
+                val now = System.currentTimeMillis()
+                if (now - lastDualScreenWarningMs < 10000) return
+                lastDualScreenWarningMs = now
+
+                TrackEventTask(this, "dual_screen", "Mode layar ganda/split-screen terdeteksi").execute()
+                AlarmUtils.playAlarmAndForceClose(this)
+            }
+        } catch (e: Exception) {
+            // Abaikan
+        }
+    }
+
+    /* ---------------------------------------------------------
      * Lifecycle
      * --------------------------------------------------------- */
+    override fun onStop() {
+        super.onStop()
+        // 🚨 Sinkronisasi: siswa meninggalkan app (keluar paksa / force-unpin /
+        // tekan Home / pindah app / notification shade). Kirim event ke
+        // Live Monitor admin & pengawas.
+        if (!isExiting && Prefs.isExamMode(this)) {
+            TrackEventTask(this, "keluar_paksa", "Siswa keluar aplikasi secara paksa (lock task dilepas)").execute()
+        }
+    }
+
     override fun onResume() {
         super.onResume()
         // Pastikan immersive selalu aktif
@@ -409,6 +583,24 @@ class MainActivity : AppCompatActivity() {
             WindowCompat.getInsetsController(window, binding.root)
                 .hide(WindowInsetsCompat.Type.systemBars())
         }, 50)
+
+        // Pastikan lock task aktif saat kembali ke app — KECUALI sedang keluar
+        if (!isExiting) {
+            enterLockTaskMode()
+        }
+
+        // 🔄 Fitur 4: reset portal jika kembali dari background
+        resetExamIfReturned()
+
+        // 📱 Fitur 12: cek dual screen/split-screen
+        checkDualScreen()
+    }
+
+    override fun onMultiWindowModeChanged(isInMultiWindowMode: Boolean, newConfig: android.content.res.Configuration) {
+        super.onMultiWindowModeChanged(isInMultiWindowMode, newConfig)
+        if (isInMultiWindowMode && !isExiting && Prefs.isExamMode(this)) {
+            checkDualScreen()
+        }
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
@@ -416,11 +608,52 @@ class MainActivity : AppCompatActivity() {
         if (hasFocus) {
             WindowCompat.getInsetsController(window, binding.root)
                 .hide(WindowInsetsCompat.Type.systemBars())
+            // Jangan re-lock saat pengguna sedang keluar
+            if (!isExiting) {
+                enterLockTaskMode()
+            }
+        } else {
+            // 🚫 Anti floating apps / notifikasi: app kehilangan fokus = ada window lain
+            // muncul di atas (chat head, PiP, bubble, overlay, notification shade).
+            // Ini sinyal mencurigakan - siswa mungkin memakai floating window
+            // untuk mencontek.
+            if (!isExiting && Prefs.isExamMode(this)) {
+                wasInBackground = true
+                handlePossibleFloatingWindow()
+            }
         }
+    }
+
+    /**
+     * 🚫 Tangani kemungkinan floating window/overlay menutupi app.
+     * - Kirim event ke Live Monitor
+     * - Mainkan alarm 95%
+     * - Tampilkan layar penutup hitam (anti baca isi floating)
+     * - Force close setelah alarm terdengar
+     */
+    private var lastFloatingPunishMs: Long = 0
+    private fun handlePossibleFloatingWindow() {
+        val now = System.currentTimeMillis()
+        // Cooldown 5 detik agar tidak spam force close saat notifikasi singkat
+        if (now - lastFloatingPunishMs < 5000) return
+        lastFloatingPunishMs = now
+
+        // Kirim event pelanggaran ke Live Monitor
+        TrackEventTask(this, "floating_app", "Deteksi floating window/overlay saat ujian").execute()
+
+        // 📢 Alarm 95% + layar hukuman hitam + force close
+        AlarmUtils.punishFloatingApp(this, binding.floatingPunishmentOverlay)
     }
 
     override fun onDestroy() {
         super.onDestroy()
+        clockRunnable?.let { mainHandler.removeCallbacks(it) }
+        AlarmUtils.stop()
+        try {
+            unregisterReceiver(headsetReceiver)
+        } catch (e: Exception) {
+            // Abaikan
+        }
         filePathCallback?.onReceiveValue(null)
         filePathCallback = null
         webView.destroy()

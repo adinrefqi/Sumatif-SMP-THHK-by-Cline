@@ -4,7 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 
 /**
- * Penyimpanan lokal untuk konfigurasi keamanan aplikasi.
+ * Penyimpanan lokal untuk konfigurasi aplikasi.
  * PIN admin & guru disimpan ter-hash sederhana agar tidak plain-text.
  */
 object Prefs {
@@ -13,8 +13,6 @@ object Prefs {
     // Kunci
     private const val KEY_ADMIN_PIN_HASH = "admin_pin_hash"
     private const val KEY_TEACHER_PIN_HASH = "teacher_pin_hash"
-    private const val KEY_ACCESSIBILITY_ENABLED = "accessibility_enabled"
-    private const val KEY_OVERLAY_PERMISSION = "overlay_permission"
     private const val KEY_EXAM_MODE = "exam_mode_active"
     private const val KEY_PORTAL_URL = "portal_url"
 
@@ -60,20 +58,6 @@ object Prefs {
 
     fun setTeacherPin(ctx: Context, pin: String) {
         prefs(ctx).edit().putString(KEY_TEACHER_PIN_HASH, hash(pin)).apply()
-    }
-
-    fun isAccessibilityEnabled(ctx: Context): Boolean =
-        prefs(ctx).getBoolean(KEY_ACCESSIBILITY_ENABLED, false)
-
-    fun setAccessibilityEnabled(ctx: Context, enabled: Boolean) {
-        prefs(ctx).edit().putBoolean(KEY_ACCESSIBILITY_ENABLED, enabled).apply()
-    }
-
-    fun hasOverlayPermission(ctx: Context): Boolean =
-        prefs(ctx).getBoolean(KEY_OVERLAY_PERMISSION, false)
-
-    fun setOverlayPermission(ctx: Context, granted: Boolean) {
-        prefs(ctx).edit().putBoolean(KEY_OVERLAY_PERMISSION, granted).apply()
     }
 
     fun isExamMode(ctx: Context): Boolean =

@@ -2,12 +2,6 @@
 <resources>
     <string name="app_name">Exambrowser THHK</string>
     <string name="portal_url">https://portal-sumatif-thhk.vercel.app</string>
-    <string name="accessibility_service_label">Keamanan Ujian Exambrowser THHK</string>
-    <string name="accessibility_service_description">Mencegah siswa keluar dari aplikasi ujian, membuka aplikasi lain, floating window, screenshot, dan aktivitas mencurigakan selama ujian berlangsung.</string>
-    <string name="guard_channel_name">Keamanan Ujian Aktif</string>
-    <string name="guard_channel_desc">Menjaga aplikasi ujian tetap di layar selama ujian berlangsung.</string>
-    <string name="guard_notification_title">Ujian Sumatif THHK Sedang Berlangsung</string>
-    <string name="guard_notification_text">Aplikasi ujian dalam mode terkunci. Jangan keluar dari aplikasi ini.</string>
     <string name="warning_title">⚠️ Peringatan Keamanan</string>
     <string name="warning_floating">Anda mencoba membuka aplikasi lain / floating window selama ujian. Tindakan ini dicatat!</string>
     <string name="warning_exit">Anda mencoba keluar dari aplikasi ujian. Tindakan ini dicatat!</string>
@@ -24,4 +18,12 @@
     <string name="please_wait">Memuat portal ujian…</string>
     <string name="no_internet">Tidak ada koneksi internet. Periksa koneksi Anda.</string>
     <string name="ssl_error">Koneksi tidak aman. Hubungi pengawas.</string>
+    <string name="floating_detected">Floating window terdeteksi!\nAplikasi ujian akan ditutup.</string>
+    <string name="security_menu_title">Menu Keamanan</string>
+    <string name="security_menu_subtitle">Khusus pengawas / admin</string>
+    <string name="security_change_url">Ubah URL Portal</string>
+    <string name="security_change_url_desc">Ganti alamat portal ujian</string>
+    <string name="security_exit_app">Keluar Aplikasi</string>
+    <string name="security_exit_app_desc">Tutup aplikasi ujian</string>
+    <string name="btn_close">Tutup</string>
 </resources>
