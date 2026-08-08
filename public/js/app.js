@@ -17,9 +17,10 @@ const PDFJS_CDN = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.mi
 const PDFJS_WORKER = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 const PDF_DEFAULT_ZOOM = 140;
 const PDF_MOBILE_DEFAULT_ZOOM = 180;
-const PDF_MIN_ZOOM = 50;
+const PDF_MIN_ZOOM = 25;
 const PDF_MAX_ZOOM = 400;
 const PDF_ZOOM_STEP = 5;
+const PDF_VIEW_STATE_PREFIX = "thhk-pdf-view";
 
 const EXAM_LABELS = {
     agama_katolik: "Agama Katolik",
@@ -68,6 +69,30 @@ const SCREENS = ["screen-login", "screen-monitor", "screen-student"];
 
 function defaultPdfZoom() {
     return window.matchMedia("(max-width: 640px)").matches ? PDF_MOBILE_DEFAULT_ZOOM : PDF_DEFAULT_ZOOM;
+}
+
+function pdfViewStateKey() {
+    if (!state.session || !state.examKey) return null;
+    return [PDF_VIEW_STATE_PREFIX, state.session.name, state.session.className, state.examKey].join(":");
+}
+
+function loadPdfViewState(pageCount) {
+    try {
+        const saved = JSON.parse(localStorage.getItem(pdfViewStateKey()) || "null");
+        if (!saved) return 1;
+        state.pdfZoom = clampPdfZoom(saved.zoom);
+        return Math.min(pageCount, Math.max(1, Number(saved.page) || 1));
+    } catch (e) {
+        return 1;
+    }
+}
+
+function savePdfViewState() {
+    const key = pdfViewStateKey();
+    if (!key) return;
+    try {
+        localStorage.setItem(key, JSON.stringify({ page: state.pdfPage, zoom: state.pdfZoom }));
+    } catch (e) { /* penyimpanan lokal tidak wajib */ }
 }
 
 /* ------------------------------------------------------------------
@@ -167,7 +192,9 @@ async function api(path, options = {}) {
             body: options.body ? JSON.stringify(options.body) : undefined,
             credentials: "same-origin",
         });
+        updateConnectionStatus(true);
     } catch (e) {
+        updateConnectionStatus(false);
         const err = new Error("Gagal terhubung ke server. Pastikan server backend Node.js berjalan di port 3000.");
         err.status = 0;
         throw err;
@@ -926,6 +953,7 @@ function renderStudentHead() {
     $("stud-meta").textContent = `${state.session.className || "—"} • ${label}`;
     $("stud-subtitle").textContent = `Penilaian Sumatif • ${label}`;
 
+    updateConnectionStatus();
     $("logout-btn-student").addEventListener("click", handleLogout);
     $("logout-fab").addEventListener("click", handleLogout);
 }
@@ -1110,6 +1138,13 @@ async function renderPdfViewer() {
                     <span class="zoom-label" id="zoom-label">${state.pdfZoom}%</span>
                     <input type="range" class="zoom-range" id="zoom-range" min="${PDF_MIN_ZOOM}" max="${PDF_MAX_ZOOM}" step="${PDF_ZOOM_STEP}" value="${state.pdfZoom}" aria-label="Atur zoom PDF" />
                     <button type="button" class="zoom-btn" id="zoom-in" aria-label="Perbesar">+</button>
+                    <button type="button" class="fit-width-btn" id="fit-width" aria-label="Pas Lebar" title="Pas Lebar">?</button>
+                    <button type="button" class="fullscreen-btn" id="fullscreen-btn" aria-label="Layar penuh PDF" title="Layar Penuh" aria-pressed="false">
+                        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/>
+                        </svg>
+                    </button>
+
                 </div>
             </div>
 
@@ -1132,6 +1167,11 @@ async function renderPdfViewer() {
                     Selesai Ujian
                 </button>
             </div>
+            <button type="button" class="fullscreen-exit" id="fullscreen-exit" aria-label="Keluar dari layar penuh" hidden>
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M9 3v4a2 2 0 0 1-2 2H3M15 3v4a2 2 0 0 0 2 2h4M9 21v-4a2 2 0 0 0-2-2H3M15 21v-4a2 2 0 0 1 2-2h4"/>
+                </svg>
+            </button>
         </div>`;
 
     $("prev-page").addEventListener("click", () => changePage(-1));
@@ -1140,6 +1180,9 @@ async function renderPdfViewer() {
     $("zoom-out").addEventListener("click", () => changeZoom(-20));
     $("zoom-range").addEventListener("input", (event) => previewPdfZoom(event.target.value));
     $("zoom-range").addEventListener("change", () => renderPage(state.pdfPage));
+    $("fit-width").addEventListener("click", fitPdfWidth);
+    $("fullscreen-btn").addEventListener("click", () => togglePdfFullscreen(true));
+    $("fullscreen-exit").addEventListener("click", () => togglePdfFullscreen(false));
     setupPdfPinchZoom();
     $("finish-btn").addEventListener("click", openFinishModal);
 
@@ -1169,9 +1212,10 @@ async function loadExamPdf() {
         const pdf = await window.pdfjsLib.getDocument({ data }).promise;
 
         state.pdfDoc = pdf;
-        $("page-count").textContent = `1 / ${pdf.numPages}`;
+        const savedPage = loadPdfViewState(pdf.numPages);
+        $("page-count").textContent = `${savedPage} / ${pdf.numPages}`;
 
-        await renderPage(1);
+        await renderPage(savedPage);
 
         // TRACK: PDF berhasil dirender di layar siswa
         await trackEvent("pdf_buka", "Berkas soal berhasil dirender di layar");
@@ -1208,6 +1252,7 @@ async function renderPage(num) {
 
     state.pdfPage = num;
     updatePdfControls();
+    savePdfViewState();
 
     if (num > 1) {
         await trackEvent("pdf_halaman", `Pindah ke halaman ${num}`, num);
@@ -1243,8 +1288,31 @@ async function changeZoom(delta) {
     await renderPage(state.pdfPage);
 }
 
+async function fitPdfWidth() {
+    if (!state.pdfDoc) return;
+    const viewer = $("viewer-window");
+    const page = await state.pdfDoc.getPage(state.pdfPage);
+    const naturalWidth = page.getViewport({ scale: 1 }).width;
+    state.pdfZoom = clampPdfZoom((viewer.clientWidth - 32) / naturalWidth * 100);
+    await renderPage(state.pdfPage);
+}
+
+function togglePdfFullscreen(enabled) {
+    const screen = $("screen-student");
+    const button = $("fullscreen-btn");
+    const exitButton = $("fullscreen-exit");
+    if (!screen) return;
+
+    screen.classList.toggle("pdf-fullscreen", enabled);
+    button?.setAttribute("aria-pressed", String(enabled));
+    if (exitButton) exitButton.hidden = !enabled;
+    document.body.classList.toggle("pdf-fullscreen-open", enabled);
+}
+
 function clampPdfZoom(zoom) {
-    return Math.min(PDF_MAX_ZOOM, Math.max(PDF_MIN_ZOOM, Math.round(Number(zoom) / PDF_ZOOM_STEP) * PDF_ZOOM_STEP));
+    const numericZoom = Number(zoom);
+    if (!Number.isFinite(numericZoom)) return defaultPdfZoom();
+    return Math.min(PDF_MAX_ZOOM, Math.max(PDF_MIN_ZOOM, Math.round(numericZoom / PDF_ZOOM_STEP) * PDF_ZOOM_STEP));
 }
 
 function previewPdfZoom(zoom) {
@@ -1325,6 +1393,15 @@ function stopKeepalive() {
     state.keepaliveTimer = null;
 }
 
+function updateConnectionStatus(online = navigator.onLine) {
+    const indicator = $("connection-status");
+    if (!indicator) return;
+    const connected = online && navigator.onLine;
+    indicator.classList.toggle("is-offline", !connected);
+    indicator.textContent = connected ? "Online" : "Offline";
+}
+
+
 /* ---------- Selesai ujian ---------- */
 function openFinishModal() {
     openModal("modal-finish");
@@ -1391,6 +1468,7 @@ async function handleLogout() {
 }
 
 function teardownSession() {
+    togglePdfFullscreen(false);
     clearInterval(state.monitorTimer);
     state.monitorTimer = null;
     stopKeepalive();
@@ -1459,6 +1537,11 @@ function init() {
     setupPasswordToggle();
     setupDemoChips();
     setupSecurityGuards();
+    window.addEventListener("online", updateConnectionStatus);
+    window.addEventListener("offline", updateConnectionStatus);
+    document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") togglePdfFullscreen(false);
+    });
 
     $("login-form").addEventListener("submit", handleLogin);
 
