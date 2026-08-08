@@ -958,6 +958,26 @@ textarea:focus {
     color: var(--ink);
 }
 
+.siswa-filter {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--line);
+}
+
+.siswa-filter input,
+.siswa-filter select {
+    flex: 1 1 140px;
+    min-width: 0;
+    padding: 8px 10px;
+    font-size: 0.85rem;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #fff;
+    color: var(--ink);
+}
+
 .panel-badge {
     background: var(--navy-100);
     color: var(--navy-700);

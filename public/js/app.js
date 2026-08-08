@@ -123,6 +123,7 @@ const state = {
     pdfZoom: defaultPdfZoom(),
     monitorTimer: null,
     monitorLoading: false,
+    siswaList: [],       // data siswa terakhir dari /api/monitor (untuk filter & urut)
     keepaliveTimer: null,
     // Untuk deteksi event pelanggaran BARU dari aplikasi Android,
     // lalu tampilkan notifikasi menonjol di dashboard admin/pengawas.
@@ -634,17 +635,52 @@ function statusChip(event) {
     }
 }
 
+// Isi ulang <select> filter tanpa menghilangkan pilihan pengawas saat polling.
+function syncFilterOptions(el, values, allLabel) {
+    const keep = el.value;
+    const opts = [...new Set(values.filter(Boolean))].sort((a, b) =>
+        String(a).localeCompare(String(b), "id", { numeric: true })
+    );
+    el.innerHTML =
+        `<option value="">${allLabel}</option>` +
+        opts.map((v) => `<option value="${esc(v)}">${esc(v)}</option>`).join("");
+    el.value = opts.includes(keep) ? keep : "";
+}
+
 function renderSiswa(list = []) {
+    state.siswaList = list;
     const body = $("monitor-siswa-body");
     const activeCount = list.filter((s) => s.isActive && !s.examCompleted).length;
     $("badge-siswa-aktif").textContent = String(activeCount);
 
-    if (!list.length) {
-        body.innerHTML = '<tr class="empty-row"><td colspan="8">Belum ada siswa yang masuk.</td></tr>';
+    const selRuang = $("siswa-filter-ruang");
+    const selKelas = $("siswa-filter-kelas");
+    syncFilterOptions(selRuang, list.map((s) => s.room), "Semua Ruang");
+    syncFilterOptions(selKelas, list.map((s) => s.className), "Semua Kelas");
+
+    const q = ($("siswa-search").value || "").trim().toLowerCase();
+    const shown = list
+        .filter(
+            (s) =>
+                (!selRuang.value || s.room === selRuang.value) &&
+                (!selKelas.value || s.className === selKelas.value) &&
+                (!q || String(s.name || "").toLowerCase().includes(q))
+        )
+        // Urut: ruang → kelas → nomor ujian / nama
+        .sort((a, b) =>
+            String(a.room || "").localeCompare(String(b.room || ""), "id", { numeric: true }) ||
+            String(a.className || "").localeCompare(String(b.className || ""), "id", { numeric: true }) ||
+            String(a.examNumber || a.name || "").localeCompare(String(b.examNumber || b.name || ""), "id", { numeric: true })
+        );
+
+    if (!shown.length) {
+        body.innerHTML = `<tr class="empty-row"><td colspan="8">${
+            list.length ? "Tidak ada siswa yang cocok dengan filter." : "Belum ada siswa yang masuk."
+        }</td></tr>`;
         return;
     }
 
-    body.innerHTML = list
+    body.innerHTML = shown
         .map((s) => {
             const attendance = s.attendance
                 ? '<span class="badge badge-success">Hadir</span>'
@@ -1613,6 +1649,10 @@ function init() {
     $("login-form").addEventListener("submit", handleLogin);
 
     $("logout-btn").addEventListener("click", handleLogout);
+
+    for (const id of ["siswa-search", "siswa-filter-ruang", "siswa-filter-kelas"]) {
+        $(id).addEventListener("input", () => renderSiswa(state.siswaList));
+    }
     $("refresh-monitor").addEventListener("click", async () => {
         await Promise.all([loadMonitor(), loadTokens()]);
         if (!$("live-pill")?.classList.contains("stale")) {
