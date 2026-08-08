@@ -14,6 +14,16 @@ function nowISO() {
     return new Date().toISOString();
 }
 
+/* Awal hari berjalan menurut zona waktu sekolah, dikembalikan sebagai ISO UTC.
+ * Server (Vercel) berjalan di UTC, jadi tanpa offset ini "hari ini" akan
+ * bergeser 7 jam dan aktivitas dini hari WIB ikut terbuang. */
+function startOfTodayISO() {
+    const offsetMs = config.timezoneOffsetMinutes * 60 * 1000;
+    const lokal = new Date(Date.now() + offsetMs);
+    lokal.setUTCHours(0, 0, 0, 0);
+    return new Date(lokal.getTime() - offsetMs).toISOString();
+}
+
 function generateId(prefix = "id") {
     return `${prefix}_${crypto.randomBytes(6).toString("hex")}`;
 }
@@ -285,8 +295,12 @@ class MemoryStore {
     }
 
     getTracking() {
-        // Urutkan terbaru dulu
-        return [...this.tracking].sort((a, b) => (a.at < b.at ? 1 : -1));
+        // Hanya hari berjalan, terbaru dulu. Riwayat lintas hari membuat
+        // dashboard ujian bercampur dengan sesi kemarin.
+        const batas = startOfTodayISO();
+        return this.tracking
+            .filter((t) => !t.at || t.at >= batas)
+            .sort((a, b) => (a.at < b.at ? 1 : -1));
     }
 
     getTrackingBySession(sessionId) {
@@ -324,21 +338,24 @@ class MemoryStore {
         const aktifCount = aktif.filter((s) => s.isActive && !s.examCompleted).length;
 
         const pengawas = sessions.filter((s) => s.role === "pengawas").map((s) => ({ ...s }));
+        const kejadianHariIni = this.getTracking();
 
         return {
             generatedAt: nowISO(),
             stats: {
-                totalSiswaLogin: this.attendance.length,
+                // Sumbernya sama dengan tabel Siswa Aktif agar kartu dan tabel
+                // tidak pernah bertentangan.
+                totalSiswaLogin: aktif.filter((s) => s.attendance).length,
                 totalSiswaAktif: aktifCount,
                 totalBeritaAcara: this.beritaAcara.length,
                 totalTokensDipakai: this.tokenUses.size,
                 totalTokenValid: this.tokens.size,
-                totalPeristiwa: this.tracking.length,
+                totalPeristiwa: kejadianHariIni.length,
             },
             siswa: aktif,
             pengawas,
             beritaAcara: [...this.beritaAcara].reverse(),
-            kejadian: this.getTracking(),
+            kejadian: kejadianHariIni,
         };
     }
 }
@@ -874,9 +891,12 @@ class SupabaseStore {
         const now = Date.now();
         const activeWindowMs = 3 * 60 * 1000;
 
+        // Riwayat aktivitas dibatasi hari berjalan (zona waktu sekolah).
+        const awalHari = startOfTodayISO();
+
         // Ambil data real dari Supabase agar akurat lintas instance serverless.
         try {
-            const [beritaRes, trackingRes, usersRes, attendanceRes, tokenRes] = await Promise.all([
+            const [beritaRes, trackingRes, usersRes, attendanceRes, tokenRes, eventCountRes] = await Promise.all([
                 this.client
                     .from(this.tables.beritaAcara)
                     .select("*")
@@ -885,6 +905,7 @@ class SupabaseStore {
                 this.client
                     .from(this.tables.tracking)
                     .select("session_id, student_name, user_role, event, detail, page, created_at")
+                    .gte("created_at", awalHari)
                     .order("created_at", { ascending: false })
                     .limit(200),
                 this.client
@@ -898,6 +919,13 @@ class SupabaseStore {
                 this.client
                     .from(this.tables.tokens)
                     .select("token"),
+                // Jumlah peristiwa hari ini yang sebenarnya. Tanpa ini kartu
+                // statistik hanya menghitung baris yang terambil, sehingga
+                // mentok di 200 (batas limit query di atas) dan berhenti bergerak.
+                this.client
+                    .from(this.tables.tracking)
+                    .select("*", { count: "exact", head: true })
+                    .gte("created_at", awalHari),
             ]);
 
             if (!beritaRes.error && beritaRes.data) {
@@ -958,12 +986,18 @@ class SupabaseStore {
             const aktifCount = students.filter((s) => s.isActive && !s.examCompleted).length;
 
             const stats = {
-                totalSiswaLogin: hadirSet.size,
+                // Dihitung dari daftar siswa yang sama dengan tabel di dashboard,
+                // bukan dari seluruh baris presensi sepanjang masa. Kalau tidak,
+                // kartu bisa menampilkan "10 Siswa Presensi" saat tabelnya kosong.
+                totalSiswaLogin: students.filter((s) => s.attendance).length,
                 totalSiswaAktif: aktifCount,
                 totalBeritaAcara: this.memory.beritaAcara.length,
                 totalTokensDipakai: this._tokenUsesCache.size,
                 totalTokenValid: tokenCount,
-                totalPeristiwa: this.memory.tracking.length,
+                totalPeristiwa:
+                    typeof eventCountRes.count === "number"
+                        ? eventCountRes.count
+                        : this.memory.tracking.length,
             };
 
             return {

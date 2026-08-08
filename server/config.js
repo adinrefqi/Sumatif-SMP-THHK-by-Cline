@@ -12,6 +12,12 @@ module.exports = {
     // Port server HTTP
     port: process.env.PORT || 3000,
 
+    // Zona waktu sekolah dalam menit dari UTC. Dipakai untuk menentukan
+    // batas "hari berjalan" pada Riwayat Aktivitas, karena server produksi
+    // (Vercel) berjalan di UTC. Default WIB (UTC+7).
+    // WITA = 480, WIT = 540.
+    timezoneOffsetMinutes: Number(process.env.TZ_OFFSET_MINUTES || 420),
+
     // ============ BERKAS SOAL (Google Drive) ============
     // ID berkas publik Google Drive untuk setiap mata pelajaran.
     // Format tautan: https://drive.google.com/file/d/<FILE_ID>/view
