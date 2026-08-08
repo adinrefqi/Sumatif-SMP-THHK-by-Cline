@@ -63,6 +63,7 @@ const EVENT_LABELS = {
     aktivitas_mencurigakan: "Aktivitas Mencurigakan",
     token_dibuat: "Token Dibuat",
     token_dihapus: "Token Dihapus",
+    reset_ujian: "Reset Ujian",
     // 🚨 Event dari aplikasi Android Exambrowser
     keluar_paksa: "🚨 KELUAR PAKSA",
     floating_app: "🚨 FLOATING DETEKSI",
@@ -678,7 +679,7 @@ function renderSiswa(list = []) {
         : "";
 
     if (!shown.length) {
-        body.innerHTML = `<tr class="empty-row"><td colspan="8">${
+        body.innerHTML = `<tr class="empty-row"><td colspan="9">${
             list.length ? "Tidak ada siswa yang cocok dengan filter." : "Belum ada siswa yang masuk."
         }</td></tr>`;
         return;
@@ -713,9 +714,35 @@ function renderSiswa(list = []) {
                         ${fmtTime(s.lastAt)}
                         <div style="color:#8a97a8;font-size:.72rem;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(s.lastDetail || "")}</div>
                     </td>
+                    <td>${s.examCompleted && s.username
+                    ? `<button type="button" class="btn btn-outline btn-xs" data-reset="${esc(s.username)}">Reset</button>`
+                    : '<span class="token-sub">—</span>'
+                }</td>
                 </tr>`;
         })
         .join("");
+
+    body.querySelectorAll("[data-reset]").forEach((btn) => {
+        btn.addEventListener("click", () => handleResetSiswa(btn.dataset.reset, btn));
+    });
+}
+
+/* Buka kembali ujian siswa yang sudah selesai/keluar (pengawas & admin). */
+async function handleResetSiswa(username, btn) {
+    const row = state.siswaList.find((s) => s.username === username);
+    const nama = row ? row.name : username;
+    if (!confirm(`Buka kembali ujian untuk ${nama}?\n\nSiswa dapat login dan mengerjakan soal lagi.`)) return;
+
+    setBusy(btn, true);
+    try {
+        await api("/api/reset-siswa", { method: "POST", body: { username } });
+        showToast(`Ujian ${nama} dibuka kembali.`);
+        await loadMonitor();
+    } catch (err) {
+        showToast(err.message || "Gagal mereset ujian siswa.");
+    } finally {
+        setBusy(btn, false);
+    }
 }
 
 function eventDotClass(event) {

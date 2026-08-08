@@ -230,6 +230,23 @@ app.post("/api/finish", requireSession("siswa"), async (req, res) => {
 /* ---------- Logout ---------- */
 app.post("/api/logout", requireSession(null), async (req, res) => {
     const sess = req.session;
+
+    // Siswa yang keluar setelah token ujian valid dianggap selesai:
+    // soal tidak boleh dibuka lagi lewat login ulang. Hanya reset oleh
+    // pengawas/admin yang membukanya kembali. Siswa yang keluar sebelum
+    // token divalidasi (belum masuk ujian) tidak dikunci.
+    if (sess.role === "siswa" && sess.tokenValid && !sess.examCompleted) {
+        try {
+            await store.updateSessionState(req.sessionToken, {
+                examCompleted: true,
+                examCompletedAt: new Date().toISOString(),
+            });
+            track(req, "selesai_ujian", "Siswa keluar saat ujian berlangsung");
+        } catch (e) {
+            // abaikan - logout tetap dilanjutkan
+        }
+    }
+
     try {
         await store.destroySession(req.sessionToken);
     } catch (e) {
@@ -237,6 +254,28 @@ app.post("/api/logout", requireSession(null), async (req, res) => {
     }
     clearSessionCookie(res);
     return res.json({ ok: true });
+});
+
+/* ---------- Reset kunci ujian siswa (pengawas/admin) ---------- */
+app.post("/api/reset-siswa", requireSession("pengawas"), async (req, res) => {
+    const username = String((req.body || {}).username || "").trim();
+    if (!username) {
+        return res.status(400).json({ error: "Username siswa wajib diisi." });
+    }
+
+    const siswa = config.studentCredentials.find((c) => c.username === username);
+    if (!siswa) {
+        return res.status(404).json({ error: "Siswa tidak ditemukan." });
+    }
+
+    try {
+        await store.resetStudentLock(username);
+    } catch (e) {
+        return res.status(500).json({ error: "Gagal mereset ujian siswa." });
+    }
+
+    track(req, "reset_ujian", `${req.session.name} mereset ujian ${siswa.name}`);
+    return res.json({ ok: true, name: siswa.name });
 });
 
 /* ---------- Presensi (siswa) ---------- */

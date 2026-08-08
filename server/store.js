@@ -34,6 +34,10 @@ class MemoryStore {
         this.tracking = [];
         this.tokenUses = new Map(); // examToken -> [ sessionId ]
         this.tokens = new Map(); // examToken -> { examKey, label, createdAt, createdBy }
+        // Siswa yang sudah selesai/keluar dari ujian. Kunci bertahan meski
+        // sesinya hilang, jadi login ulang tidak membuka soal lagi.
+        // Hanya pengawas/admin yang bisa membukanya lewat resetStudentLock().
+        this.lockedStudents = new Set(); // username
         // Seed token bawaan dari config (mode demo / kompatibilitas)
         Object.entries(config.examTokens || {}).forEach(([examToken, entry]) => {
             this.tokens.set(examToken, {
@@ -47,6 +51,10 @@ class MemoryStore {
 
     /* ---------------- Sesi ---------------- */
     createSession({ username, name, role, className, exam, room, examNumber }) {
+        // Satu akun = satu sesi aktif. Sesi lama dari perangkat/login
+        // sebelumnya dibuang agar tidak muncul dobel di Live Monitor.
+        this._dropSessionsOf(username);
+
         const sessionId = generateId("ses");
         const session = {
             id: sessionId,
@@ -58,10 +66,35 @@ class MemoryStore {
             exam: exam || null,
             room: room || null,
             examNumber: examNumber || null,
+            // Login ulang tidak menghapus kunci ujian.
+            examCompleted: role === "siswa" && this.lockedStudents.has(username),
             createdAt: nowISO(),
         };
         this.sessions.set(session.token, session);
         return session;
+    }
+
+    /* Buka kunci ujian seorang siswa (hanya dipanggil dari endpoint pengawas) */
+    resetStudentLock(username) {
+        const found = this.lockedStudents.delete(username);
+        let liveSession = false;
+        for (const s of this.sessions.values()) {
+            if (s.username === username) {
+                s.examCompleted = false;
+                s.examCompletedAt = null;
+                liveSession = true;
+            }
+        }
+        return found || liveSession;
+    }
+
+    /* Buang sesi lama milik username yang sama (dipakai juga oleh SupabaseStore
+     * untuk menyinkronkan cache in-memory setelah baris DB dinonaktifkan). */
+    _dropSessionsOf(username) {
+        if (!username) return;
+        for (const [token, s] of this.sessions) {
+            if (s.username === username) this.sessions.delete(token);
+        }
     }
 
     _newSessionToken() {
@@ -77,11 +110,20 @@ class MemoryStore {
         this.sessions.delete(token);
     }
 
-    /* Mode demo: state hanya tersimpan di memory, tidak perlu persist */
-    updateSessionState(token, state) {
+    /* Mode demo: state hanya tersimpan di memory, tidak perlu persist.
+     * Tetap async agar kontraknya sama dengan SupabaseStore — pemanggil
+     * merangkai .catch() pada hasilnya (lihat login admin di index.js). */
+    async updateSessionState(token, state) {
         const session = this.sessions.get(token);
         if (!session) return;
         Object.assign(session, state);
+
+        // Kunci ujian disimpan per-username agar tahan login ulang.
+        if (state.examCompleted === true && session.role === "siswa") {
+            this.lockedStudents.add(session.username);
+        } else if (state.examCompleted === false) {
+            this.lockedStudents.delete(session.username);
+        }
     }
 
     /* ---------------- Mapel / PDF ---------------- */
@@ -263,6 +305,7 @@ class MemoryStore {
             const isActive = Boolean(lastAt && now - new Date(lastAt).getTime() <= activeWindowMs);
             return {
                 sessionId: s.id,
+                username: s.username,
                 name: s.name,
                 className: s.className,
                 exam: s.exam,
@@ -326,6 +369,36 @@ class SupabaseStore {
 
     /* ---------------- Sesi ---------------- */
     async createSession({ username, name, role, className, exam, room, examNumber }) {
+        // Siswa yang sudah selesai/keluar tetap terkunci saat login ulang.
+        // Statusnya diwarisi dari baris sesi terakhir milik username ini;
+        // hanya reset oleh pengawas yang membukanya.
+        let locked = false;
+        if (role === "siswa") {
+            const { data: prev } = await this.client
+                .from(this.tables.users)
+                .select("exam_completed")
+                .eq("username", username)
+                .order("created_at", { ascending: false })
+                .limit(1)
+                .maybeSingle();
+            locked = Boolean(prev && prev.exam_completed);
+        }
+
+        // Satu akun = satu sesi aktif. Baris sesi lama dinonaktifkan dulu,
+        // kalau tidak Live Monitor menampilkan siswa yang sama berkali-kali
+        // (baris hanya jadi non-aktif saat siswa menekan Keluar).
+        // Kegagalan di sini tidak boleh menghalangi login saat ujian.
+        try {
+            await this.client
+                .from(this.tables.users)
+                .update({ active: false })
+                .eq("username", username)
+                .eq("active", true);
+        } catch (e) {
+            // abaikan - lanjutkan membuat sesi baru
+        }
+        this.memory._dropSessionsOf(username);
+
         const token = crypto.randomBytes(32).toString("hex");
 
         const payload = {
@@ -338,6 +411,7 @@ class SupabaseStore {
             exam_number: examNumber || null,
             token,
             active: true,
+            exam_completed: locked,
         };
 
         const { data, error } = await this.client
@@ -359,10 +433,26 @@ class SupabaseStore {
             exam: data.exam,
             room: data.room || null,
             examNumber: data.exam_number || null,
+            examCompleted: data.exam_completed || false,
             createdAt: data.created_at || nowISO(),
         };
         this.memory.sessions.set(session.token, session);
         return session;
+    }
+
+    /* Buka kunci ujian seorang siswa (hanya dipanggil dari endpoint pengawas).
+     * Semua baris sesi milik username ini dibuka, termasuk sesi lama, supaya
+     * login berikutnya tidak mewarisi kunci lagi. */
+    async resetStudentLock(username) {
+        const { data, error } = await this.client
+            .from(this.tables.users)
+            .update({ exam_completed: false, exam_completed_at: null })
+            .eq("username", username)
+            .eq("role", "siswa")
+            .select("id");
+        if (error) throw error;
+        this.memory.resetStudentLock(username);
+        return Boolean(data && data.length);
     }
 
     _buildSession(data) {
@@ -849,6 +939,7 @@ class SupabaseStore {
                 const isActive = Boolean(lastAt && now - new Date(lastAt).getTime() <= activeWindowMs);
                 return {
                     sessionId: u.id,
+                    username: u.username,
                     name: u.name,
                     className: u.class_name,
                     exam: u.exam,
