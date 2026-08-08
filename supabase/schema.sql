@@ -126,6 +126,6 @@ CREATE POLICY "Server full access tracking" ON public.tracking_activity
 -- Token default agar mudah dicoba:
 -- INSERT INTO public.exam_tokens (token, exam_key, label, created_by)
 -- VALUES
---     ('TOKEN9A', 'indonesia', 'Token Sesi Ruang 9A', 'system'),
---     ('TOKEN9B', 'matematika', 'Token Sesi Ruang 9B', 'system'),
---     ('TOKEN9C', 'ipa', 'Token Sesi Ruang 9C', 'system');
+--     ('TOKENR1', 'indonesia', 'Token Sesi Ruang 1', 'system'),
+--     ('TOKENR2', 'matematika', 'Token Sesi Ruang 2', 'system'),
+--     ('TOKENR3', 'ipa', 'Token Sesi Ruang 3', 'system');

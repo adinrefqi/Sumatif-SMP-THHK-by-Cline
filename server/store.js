@@ -451,7 +451,8 @@ class SupabaseStore {
         const f = config.examFiles[examKey];
         const fallback = f ? f.driveFileId || "" : "";
 
-        // Ambil level kelas dari className: "7A" -> "7", "8B" -> "8", dst.
+        // Ambil level kelas dari className: "7" -> "7". Tetap toleran terhadap
+        // format lama bersuffix ("7A" -> "7") bila ada data sesi lama.
         const level = String(className || "").replace(/\D/g, "").slice(0, 1);
 
         try {

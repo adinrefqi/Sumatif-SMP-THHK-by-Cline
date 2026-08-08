@@ -578,10 +578,9 @@ if (require.main === module) {
         console.log("------------------------------------------------");
         console.log("  AKUN DEMO:");
         console.log("    Pengawas : pengawas / thhk2026");
-        console.log("    Siswa    : siswa1 / rahasia123   (9A - B. Indonesia)");
-        console.log("    Siswa    : siswa2 / rahasia123   (9A - Matematika)");
-        console.log("    Siswa    : siswa3 / rahasia123   (9B - IPA)");
-        console.log("  TOKEN DEMO : TOKEN9A, TOKEN9B, TOKEN9C");
+        console.log("    Siswa    : siswa2 / rahasia123   (Kelas 9 - Matematika)");
+        console.log("    Siswa    : siswa3 / rahasia123   (Kelas 9 - IPA)");
+        console.log("  TOKEN DEMO : TOKENR1, TOKENR2, TOKENR3");
         console.log("================================================");
     });
 
