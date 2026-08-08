@@ -225,14 +225,36 @@
                             <span class="panel-badge" id="badge-siswa-aktif">0</span>
                         </div>
                         <div class="siswa-filter">
-                            <input type="search" id="siswa-search" placeholder="Cari nama siswa…"
-                                autocomplete="off" />
-                            <select id="siswa-filter-ruang">
-                                <option value="">Semua Ruang</option>
-                            </select>
-                            <select id="siswa-filter-kelas">
-                                <option value="">Semua Kelas</option>
-                            </select>
+                            <div class="input-wrap siswa-filter-search">
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="11" cy="11" r="7" />
+                                    <path d="m20 20-3.5-3.5" />
+                                </svg>
+                                <input type="search" id="siswa-search" placeholder="Cari nama siswa…"
+                                    autocomplete="off" aria-label="Cari nama siswa" />
+                            </div>
+                            <div class="input-wrap">
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6" />
+                                    <path d="M9 9h.01M15 9h.01" />
+                                </svg>
+                                <select id="siswa-filter-ruang" aria-label="Filter ruang">
+                                    <option value="">Semua Ruang</option>
+                                </select>
+                            </div>
+                            <div class="input-wrap">
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+                                </svg>
+                                <select id="siswa-filter-kelas" aria-label="Filter kelas">
+                                    <option value="">Semua Kelas</option>
+                                </select>
+                            </div>
+                            <span class="siswa-filter-count" id="siswa-filter-count"></span>
                         </div>
                         <div class="table-wrap">
                             <table class="table">

@@ -673,6 +673,10 @@ function renderSiswa(list = []) {
             String(a.examNumber || a.name || "").localeCompare(String(b.examNumber || b.name || ""), "id", { numeric: true })
         );
 
+    $("siswa-filter-count").textContent = list.length
+        ? `${shown.length} dari ${list.length} siswa`
+        : "";
+
     if (!shown.length) {
         body.innerHTML = `<tr class="empty-row"><td colspan="8">${
             list.length ? "Tidak ada siswa yang cocok dengan filter." : "Belum ada siswa yang masuk."

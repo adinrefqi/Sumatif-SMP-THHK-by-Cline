@@ -958,24 +958,54 @@ textarea:focus {
     color: var(--ink);
 }
 
+/* Toolbar filter tabel Siswa Aktif — memakai .input-wrap agar seragam dengan form lain */
 .siswa-filter {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    align-items: center;
+    gap: 10px;
     padding: 12px 20px;
+    background: var(--navy-50);
     border-bottom: 1px solid var(--line);
+}
+
+.siswa-filter .input-wrap {
+    flex: 1 1 150px;
+    min-width: 0;
+}
+
+.siswa-filter .siswa-filter-search {
+    flex: 2 1 220px;
+}
+
+.siswa-filter .input-wrap svg {
+    left: 11px;
 }
 
 .siswa-filter input,
 .siswa-filter select {
-    flex: 1 1 140px;
-    min-width: 0;
-    padding: 8px 10px;
-    font-size: 0.85rem;
-    border: 1px solid var(--line);
-    border-radius: 8px;
-    background: #fff;
-    color: var(--ink);
+    padding: 9px 12px 9px 34px;
+    font-size: 0.86rem;
+    border-radius: 999px;
+    box-shadow: var(--shadow-sm);
+}
+
+.siswa-filter select {
+    padding-right: 30px;
+    background-position: right 11px center;
+    cursor: pointer;
+}
+
+.siswa-filter input[type="search"]::-webkit-search-cancel-button {
+    cursor: pointer;
+}
+
+.siswa-filter-count {
+    margin-left: auto;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--muted);
+    white-space: nowrap;
 }
 
 .panel-badge {
