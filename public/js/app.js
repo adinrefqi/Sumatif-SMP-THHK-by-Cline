@@ -15,6 +15,7 @@
    ------------------------------------------------------------------ */
 const PDFJS_CDN = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
 const PDFJS_WORKER = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+const PDF_DEFAULT_ZOOM = 140;
 
 const EXAM_LABELS = {
     agama_katolik: "Agama Katolik",
@@ -72,7 +73,7 @@ const state = {
     finished: false,     // apakah ujian sudah diselesaikan
     pdfDoc: null,        // dokumen PDF.js
     pdfPage: 1,
-    pdfZoom: 100,
+    pdfZoom: PDF_DEFAULT_ZOOM,
     monitorTimer: null,
     monitorLoading: false,
     keepaliveTimer: null,
@@ -1066,7 +1067,7 @@ async function renderPdfViewer() {
     state.viewerActive = true;
     state.finished = false;
     state.pdfPage = 1;
-    state.pdfZoom = 100;
+    state.pdfZoom = PDF_DEFAULT_ZOOM;
     state.pdfDoc = null;
     startKeepalive();
 
@@ -1098,7 +1099,7 @@ async function renderPdfViewer() {
                         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
                     </button>
                     <button type="button" class="zoom-btn" id="zoom-out" aria-label="Perkecil">−</button>
-                    <span class="zoom-label" id="zoom-label">100%</span>
+                    <span class="zoom-label" id="zoom-label">${state.pdfZoom}%</span>
                     <button type="button" class="zoom-btn" id="zoom-in" aria-label="Perbesar">+</button>
                 </div>
             </div>
@@ -1317,7 +1318,7 @@ function teardownSession() {
     state.finished = false;
     state.pdfDoc = null;
     state.pdfPage = 1;
-    state.pdfZoom = 100;
+    state.pdfZoom = PDF_DEFAULT_ZOOM;
 
     document.querySelectorAll(".finished-overlay").forEach((el) => el.remove());
 
