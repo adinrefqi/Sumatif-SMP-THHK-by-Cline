@@ -51,19 +51,36 @@ async function main() {
 
     // 6. (sebagian) token pengawas tidak bocor — sudah dicek di atas.
 
-    // 2. Siswa: login → presensi → token → track pdf_halaman.
+    // 2. Siswa: login → pilih mapel → presensi → token → track pdf_halaman.
     r = await api("/api/login", { method: "POST", body: { role: "siswa", username: "siswa2", password: "rahasia123" } });
     assert.strictEqual(r.status, 200, "login siswa harus 200");
     const siswaSesi = await r.json();
     assert.ok(siswaSesi.room, "siswa harus punya ruang");
 
-    // TTD digital minimal 1×1 piksel PNG data URL agar lolos validasi server.
+    // Presensi TANPA pilih mapel harus ditolak (403).
     const sig = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
     r = await api("/api/presensi", { method: "POST", body: { room: siswaSesi.room, signature: sig } });
-    assert.strictEqual(r.status, 200, "presensi harus 200");
+    assert.strictEqual(r.status, 403, "presensi sebelum pilih mapel harus 403");
+
+    // Pilih mapel matematika (mapel default siswa2).
+    r = await api("/api/pilih-mapel", { method: "POST", body: { examKey: "matematika" } });
+    assert.strictEqual(r.status, 200, "pilih mapel matematika harus 200");
+
+    // Pilih mapel lagi setelah konfirmasi harus tetap 200 (belum tokenValid).
+    r = await api("/api/pilih-mapel", { method: "POST", body: { examKey: "indonesia" } });
+    assert.strictEqual(r.status, 200, "ganti pilihan sebelum token boleh");
+
+    // Presensi sekarang boleh.
+    r = await api("/api/presensi", { method: "POST", body: { room: siswaSesi.room, signature: sig } });
+    assert.strictEqual(r.status, 200, "presensi setelah pilih mapel harus 200");
+
+    // Token indonesia (TOKENR1) valid untuk pilihan yang aktif.
+    r = await api("/api/token", { method: "POST", body: { token: "TOKENR1" } });
+    assert.strictEqual(r.status, 200, "token TOKENR1 harus valid setelah pilih indonesia");
 
     // Tanpa TTD harus ditolak (400).
     r = await api("/api/login", { method: "POST", body: { role: "siswa", username: "siswa3", password: "rahasia123" } });
+    r = await api("/api/pilih-mapel", { method: "POST", body: { examKey: "ipa" } });
     r = await api("/api/presensi", { method: "POST", body: { room: "Ruang 1" } });
     assert.strictEqual(r.status, 400, "presensi tanpa tanda tangan harus 400");
 
@@ -71,6 +88,8 @@ async function main() {
     // supaya baris monitor tetap punya presensiAt & signature.
     r = await api("/api/login", { method: "POST", body: { role: "siswa", username: "siswa2", password: "rahasia123" } });
     assert.strictEqual(r.status, 200, "login ulang siswa2 harus 200");
+    r = await api("/api/pilih-mapel", { method: "POST", body: { examKey: "matematika" } });
+    assert.strictEqual(r.status, 200, "pilih matematika (login ulang) harus 200");
     r = await api("/api/presensi", { method: "POST", body: { room: "Ruang 1", signature: sig } });
     assert.strictEqual(r.status, 200, "presensi ulang siswa2 harus 200");
     r = await api("/api/token", { method: "POST", body: { token: "TOKENR2" } });
@@ -135,6 +154,41 @@ async function main() {
     assert.strictEqual(r.status, 200, "login ulang admin harus 200");
     r = await api("/api/reset-siswa", { method: "POST", body: { username: "siswa2" } });
     assert.strictEqual(r.status, 200, "admin reset siswa harus 200");
+
+    // 7. Fitur baru: selesai mapel → login ulang → mapel sama 403, mapel lain 200.
+    // (Perlu satu mapel lain yang terjadwal di mode demo — semua mapel aktif.)
+    r = await api("/api/login", { method: "POST", body: { role: "siswa", username: "siswa2", password: "rahasia123" } });
+    assert.strictEqual(r.status, 200, "login siswa2 (blok 7) harus 200");
+    r = await api("/api/pilih-mapel", { method: "POST", body: { examKey: "matematika" } });
+    assert.strictEqual(r.status, 200, "pilih matematika harus 200");
+    r = await api("/api/presensi", { method: "POST", body: { room: "Ruang 1", signature: sig } });
+    assert.strictEqual(r.status, 200, "presensi blok 7 harus 200");
+    r = await api("/api/token", { method: "POST", body: { token: "TOKENR2" } });
+    assert.strictEqual(r.status, 200, "token TOKENR2 blok 7 harus 200");
+    r = await api("/api/finish", { method: "POST" });
+    assert.strictEqual(r.status, 200, "finish harus 200");
+
+    // Login ulang → sesi bersih, mapel matematika ditandai selesai di server.
+    r = await api("/api/login", { method: "POST", body: { role: "siswa", username: "siswa2", password: "rahasia123" } });
+    assert.strictEqual(r.status, 200, "login ulang siswa2 (setelah finish) harus 200");
+    r = await api("/api/session");
+    let sesi = await r.json();
+    assert.strictEqual(sesi.examCompleted, false, "login ulang tidak boleh mewarisi kunci global");
+    assert.ok(sesi.completedSubjects.includes("matematika"), "matematika harus tercatat selesai");
+    assert.ok(Array.isArray(sesi.todaySubjects) && sesi.todaySubjects.length > 0, "jadwal hari ini harus terisi");
+    assert.strictEqual(sesi.subjectConfirmed, false, "mapel pilihan harus kosong setelah login baru");
+
+    // Mapel sama → 403; mapel lain → 200.
+    r = await api("/api/pilih-mapel", { method: "POST", body: { examKey: "matematika" } });
+    assert.strictEqual(r.status, 403, "pilih mapel yang sudah selesai harus 403");
+    r = await api("/api/pilih-mapel", { method: "POST", body: { examKey: "indonesia" } });
+    assert.strictEqual(r.status, 200, "pilih mapel lain setelah satu selesai harus 200");
+
+    // Bersihkan: admin reset siswa2 supaya bisa dipakai ulang.
+    r = await api("/api/login", { method: "POST", body: { role: "pengawas", username: "admin", password: "admin123" } });
+    assert.strictEqual(r.status, 200, "login ulang admin (reset akhir) harus 200");
+    r = await api("/api/reset-siswa", { method: "POST", body: { username: "siswa2" } });
+    assert.strictEqual(r.status, 200, "admin reset akhir harus 200");
 
     console.log("OK — seluruh verifikasi end-to-end lulus");
 }

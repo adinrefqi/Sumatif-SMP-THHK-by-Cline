@@ -212,9 +212,11 @@ module.exports = {
     // username = nama depan (huruf kecil, tanpa spasi)
     // password = kata sandi default (ganti di produksi bila perlu)
     //
-    // CATATAN MAPEL: setiap akun siswa terikat SATU mapel (kolom `exam`).
-    // Untuk ujian lintas mapel, pembuat token harus memilih mapel yang
-    // sama dengan sesi siswa tersebut. Ubah kolom `exam` sesuai jadwal.
+    // CATATAN MAPEL: kolom `exam` di bawah hanyalah PENAMPUNG AWAL
+    // sebelum pemilih mapel. Mapel yang benar-benar aktif hari ini
+    // ditentukan tabel `jadwal_ujian` di Supabase; siswa memilih
+    // mapel sendiri saat login (alur ala ANBK). Ubah tabel jadwal
+    // lewat Supabase Dashboard, bukan kolom `exam` ini.
     studentCredentials: [
         // ---------- AKUN DEMO (bawaan) ----------
         {
@@ -632,6 +634,8 @@ module.exports = {
             beritaAcara: "berita_acara",
             tracking: "tracking_activity",
             exams: "exams",
+            jadwal: "jadwal_ujian",
+            progress: "student_progress",
         },
     },
 };
@@ -643,6 +647,7 @@ module.exports = {
 // - hasilnya tetap sama tiap restart (tidak acak) dan tidak bergantung
 //   pada urutan daftar di atas.
 const ROOMS = ["Ruang 1", "Ruang 2", "Ruang 3"];
+module.exports.roomList = ROOMS;
 const students = module.exports.studentCredentials;
 let seat = 0;
 for (const className of [...new Set(students.map((s) => s.className))].sort()) {

@@ -12,7 +12,7 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap"
         rel="stylesheet" />
-    <link rel="stylesheet" href="css/style.css?v=20260808d" />
+    <link rel="stylesheet" href="css/style.css?v=20260810a" />
 </head>
 
 <body>
@@ -243,6 +243,16 @@
                                 </svg>
                                 Unduh CSV
                             </button>
+                        </div>
+                    </div>
+
+                    <!-- Jadwal ujian hari ini (hanya-baca, global) -->
+                    <div class="panel">
+                        <div class="panel-head">
+                            <h2>Jadwal Ujian Hari Ini</h2>
+                        </div>
+                        <div class="log-list" id="jadwal-hari-ini">
+                            <div class="log-empty">Belum ada jadwal untuk hari ini.</div>
                         </div>
                     </div>
 
@@ -497,6 +507,28 @@
             <h2>Selesaikan Presensi Dulu</h2>
             <p class="gate-desc">Anda harus mengonfirmasi kehadiran sebelum dapat memasukkan token ujian.</p>
             <button type="button" id="open-presensi-btn" class="btn btn-primary btn-block">Buka Form Presensi</button>
+        </div>
+    </template>
+
+    <!-- Pilih mapel hari ini (ala ANBK) — sebelum presensi -->
+    <template id="tpl-subject-picker">
+        <div class="gate-card">
+            <div class="gate-icon">
+                <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="1.8"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+                </svg>
+            </div>
+            <h2>Pilih Mata Pelajaran</h2>
+            <p class="gate-desc">
+                Mapel di bawah sesuai jadwal ujian hari ini. Pilih satu untuk memulai,
+                lalu masukkan token dari pengawas ruang Anda.
+            </p>
+            <div id="subject-list" class="subject-list"></div>
+            <div id="subject-empty" class="log-empty" hidden>Tidak ada mapel terjadwal hari ini.</div>
+            <div id="subject-error" class="form-error" role="alert" hidden></div>
+            <p class="gate-hint">Selesaikan satu mapel, lalu keluar dan pilih mapel berikutnya.</p>
         </div>
     </template>
 
@@ -806,7 +838,7 @@
     <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
     <!-- PDF.js (secure viewer) -->
-    <script type="module" src="js/app.js?v=20260808d"></script>
+    <script type="module" src="js/app.js?v=20260810a"></script>
 </body>
 
 </html>

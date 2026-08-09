@@ -1588,6 +1588,84 @@ textarea:focus {
     color: var(--muted);
 }
 
+/* ---------- Pemilih mapel (ala ANBK) ---------- */
+.subject-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    text-align: left;
+    margin-bottom: 6px;
+}
+
+.subject-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 16px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: #fff;
+    cursor: pointer;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+    font: inherit;
+    text-align: left;
+}
+
+.subject-item:hover:not(:disabled) {
+    border-color: var(--navy-400);
+    box-shadow: 0 4px 14px rgba(23, 55, 94, 0.10);
+    transform: translateY(-1px);
+}
+
+.subject-item:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    background: var(--muted-soft, #f2f4f7);
+}
+
+.subject-name {
+    font-weight: 700;
+    font-size: 0.92rem;
+    color: var(--ink);
+}
+
+.subject-item:disabled .subject-name {
+    color: var(--muted);
+}
+
+.subject-meta {
+    flex: none;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--muted);
+}
+
+.subject-item:not(:disabled) .subject-meta {
+    color: var(--navy-600);
+}
+
+/* Sisa mapel pada layar selesai */
+.finished-remaining {
+    margin-top: 14px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: var(--navy-50, #eef3fb);
+    font-size: 0.86rem;
+    color: var(--navy-800);
+}
+
+.finished-remaining strong {
+    display: block;
+    margin-bottom: 4px;
+}
+
+.finished-remaining .finished-hint {
+    margin-top: 6px;
+    font-size: 0.78rem;
+    color: var(--muted);
+}
+
 /* ============================================================
    VIEWER PDF (AMAN)
    ============================================================ */

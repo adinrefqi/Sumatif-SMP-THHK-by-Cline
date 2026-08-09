@@ -128,6 +128,9 @@ const state = {
     siswaList: [],       // data siswa terakhir dari /api/monitor (untuk filter & urut)
     siswaShown: [],      // daftar siswa yang sedang dilihat (dipakai ekspor CSV & cetak)
     keepaliveTimer: null,
+    todaySubjects: [],   // jadwal mapel hari ini (dari /api/session)
+    completedSubjects: [], // mapel yang sudah diselesaikan siswa (dari /api/session)
+    subjectConfirmed: false, // apakah siswa sudah memilih mapel pada sesi ini
     // Untuk deteksi event pelanggaran BARU dari aplikasi Android,
     // lalu tampilkan notifikasi menonjol di dashboard admin/pengawas.
     seenViolationIds: new Set(),
@@ -1166,6 +1169,34 @@ function renderBeritaAcara(list = []) {
         .join("");
 }
 
+/* Panel "Jadwal Ujian Hari Ini" di Live Monitor (hanya-baca, global). */
+function renderJadwal(jadwal = []) {
+    const container = $("jadwal-hari-ini");
+    if (!container) return;
+
+    if (!jadwal.length) {
+        container.innerHTML = '<div class="log-empty">Belum ada jadwal untuk hari ini.</div>';
+        return;
+    }
+
+    container.innerHTML = jadwal
+        .map((j) => {
+            const jam =
+                j.jamMulai || j.jamSelesai
+                    ? `${esc(j.jamMulai || "…")} – ${esc(j.jamSelesai || "…")}`
+                    : "jam tidak diisi";
+            return `
+                <div class="log-item">
+                    <span class="log-dot event-presensi"></span>
+                    <div class="log-body">
+                        <div class="log-title"><strong>${esc(j.title)}</strong></div>
+                        <div class="log-detail">${esc(jam)}</div>
+                    </div>
+                </div>`;
+        })
+        .join("");
+}
+
 function setMonitorFreshness(live) {
     const pill = $("live-pill");
     if (!pill) return;
@@ -1189,6 +1220,7 @@ async function loadMonitor() {
     try {
         const data = await api("/api/monitor");
         renderStats(data.stats);
+        renderJadwal(data.jadwal);
         renderSiswa(data.siswa);
         renderLog(data.kejadian);
         renderPelanggaran(data.kejadian);
@@ -1389,6 +1421,9 @@ async function enterStudent() {
         const s = await api("/api/session");
         state.session = Object.assign(state.session, s);
         state.examKey = s.examKey || s.exam;
+        state.todaySubjects = s.todaySubjects || [];
+        state.completedSubjects = s.completedSubjects || [];
+        state.subjectConfirmed = Boolean(s.subjectConfirmed);
     } catch (e) {
         /* abaikan */
     }
@@ -1417,7 +1452,9 @@ function routeStudentStep() {
     if (s.examCompleted) {
         state.finished = true;
         state.viewerActive = false;
-        renderFinishedOverlay();
+        renderFinishedOverlay(remainingSubjects());
+    } else if (!s.subjectConfirmed) {
+        renderSubjectPicker();
     } else if (!s.attendanceDone) {
         renderAttendanceNeeded();
         openPresensiModal();
@@ -1426,6 +1463,65 @@ function routeStudentStep() {
     } else {
         state.examKey = s.examKey || s.exam;
         renderPdfViewer();
+    }
+}
+
+/* Mapel hari ini yang masih bisa dikerjakan: belum selesai dan bukan
+ * mapel yang sedang/sudah dikerjakan pada percobaan ini. */
+function remainingSubjects() {
+    const done = new Set(state.completedSubjects || []);
+    const current = state.session?.examKey || state.examKey;
+    return (state.todaySubjects || []).filter(
+        (t) => !done.has(t.examKey) && t.examKey !== current
+    );
+}
+
+/* ---------- Pemilih mapel (ala ANBK) ---------- */
+function renderSubjectPicker() {
+    const node = $("tpl-subject-picker").content.cloneNode(true);
+    $("student-body").replaceChildren(node);
+
+    const done = new Set(state.completedSubjects || []);
+    const list = $("subject-list");
+    const items = (state.todaySubjects || []).map((t) => {
+        const sudah = done.has(t.examKey);
+        const jam =
+            (t.jamMulai || t.jamSelesai)
+                ? `${esc(t.jamMulai || "…")} – ${esc(t.jamSelesai || "…")}`
+                : "";
+        return `
+            <button type="button" class="subject-item" data-exam="${esc(t.examKey)}" ${sudah ? "disabled" : ""}>
+                <span class="subject-name">${esc(t.title || examLabel(t.examKey))}</span>
+                <span class="subject-meta">${sudah ? "Selesai" : (jam ? esc(jam) : "Tersedia")}</span>
+            </button>`;
+    }).join("");
+
+    if (!items) {
+        $("subject-empty").hidden = false;
+    } else {
+        list.innerHTML = items;
+        list.querySelectorAll(".subject-item").forEach((btn) => {
+            btn.addEventListener("click", () => handleSubjectPick(btn.dataset.exam, btn));
+        });
+    }
+}
+
+async function handleSubjectPick(examKey, btn) {
+    setBusy(btn, true);
+    clearError($("subject-error"));
+    try {
+        const data = await api("/api/pilih-mapel", { method: "POST", body: { examKey } });
+        state.session.exam = data.examKey;
+        state.session.examKey = data.examKey;
+        state.examKey = data.examKey;
+        state.subjectConfirmed = true;
+        state.session.subjectConfirmed = true;
+        showToast(`Mapel dipilih: ${data.examTitle}`);
+        renderStudentHead();
+        routeStudentStep();
+    } catch (err) {
+        showError($("subject-error"), err.message);
+        setBusy(btn, false);
     }
 }
 
@@ -1934,12 +2030,21 @@ function openFinishModal() {
     openModal("modal-finish");
 }
 
-function renderFinishedOverlay() {
+function renderFinishedOverlay(remaining = []) {
     // Hapus overlay lama bila sudah ada
     document.querySelectorAll(".finished-overlay").forEach((el) => el.remove());
 
     const body = $("student-body");
     if (body) body.replaceChildren();
+
+    const sisa = remaining.length
+        ? `
+            <div class="finished-remaining">
+                <strong>Mapel lain hari ini:</strong>
+                <span>${remaining.map((t) => esc(t.title || examLabel(t.examKey))).join(" · ")}</span>
+                <p class="finished-hint">Keluar, lalu pilih mapel berikutnya untuk melanjutkan.</p>
+            </div>`
+        : "";
 
     const overlay = document.createElement("div");
     overlay.className = "finished-overlay";
@@ -1953,6 +2058,7 @@ function renderFinishedOverlay() {
             </div>
             <h2>Terima kasih!</h2>
             <p>Kehadiran Anda telah tercatat dan sesi ujian selesai. Silakan serahkan perangkat kepada pengawas ruang ujian.</p>
+            ${sisa}
             <button type="button" class="btn btn-outline btn-block" id="finish-logout">Keluar dari Ujian</button>
         </div>`;
 
@@ -1971,9 +2077,14 @@ async function handleFinishConfirm() {
         state.finished = true;
         state.viewerActive = false;
         state.session.examCompleted = true;
+        // Mapel ini kini selesai; mapel lain masih bisa dikerjakan.
+        const doneKey = state.examKey || state.session.examKey;
+        if (doneKey && !state.completedSubjects.includes(doneKey)) {
+            state.completedSubjects.push(doneKey);
+        }
         stopKeepalive();
         closeModal("modal-finish");
-        renderFinishedOverlay();
+        renderFinishedOverlay(remainingSubjects());
     } catch (err) {
         showToast(err.message || "Gagal menyimpan penyelesaian ujian. Coba lagi.");
     } finally {
@@ -2047,8 +2158,12 @@ async function bootstrap() {
                 tokenValid: s.tokenValid,
                 examKey: s.examKey,
                 tokenLabel: s.tokenLabel,
+                subjectConfirmed: Boolean(s.subjectConfirmed),
                 examCompleted: s.examCompleted,
             };
+            state.todaySubjects = s.todaySubjects || [];
+            state.completedSubjects = s.completedSubjects || [];
+            state.subjectConfirmed = Boolean(s.subjectConfirmed);
             await enterStudent();
         } else {
             showScreen("screen-login");

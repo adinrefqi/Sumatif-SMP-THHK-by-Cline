@@ -64,10 +64,10 @@ class MemoryStore {
         this.tracking = [];
         this.tokenUses = new Map(); // examToken -> [ sessionId ]
         this.tokens = new Map(); // examToken -> { examKey, label, createdAt, createdBy }
-        // Siswa yang sudah selesai/keluar dari ujian. Kunci bertahan meski
-        // sesinya hilang, jadi login ulang tidak membuka soal lagi.
+        // Penyelesaian ujian per (siswa, mapel). Tahan login ulang, jadi
+        // menyelesaikan Matematika tidak mengunci akun untuk mapel lain.
         // Hanya pengawas/admin yang bisa membukanya lewat resetStudentLock().
-        this.lockedStudents = new Set(); // username
+        this.completedSubjects = new Map(); // username -> Set<examKey>
         // Seed token bawaan dari config (mode demo / kompatibilitas)
         Object.entries(config.examTokens || {}).forEach(([examToken, entry]) => {
             this.tokens.set(examToken, {
@@ -96,17 +96,20 @@ class MemoryStore {
             exam: exam || null,
             room: room || null,
             examNumber: examNumber || null,
-            // Login ulang tidak menghapus kunci ujian.
-            examCompleted: role === "siswa" && this.lockedStudents.has(username),
+            // Sesi selalu mulai dengan percobaan belum selesai. Penyelesaian
+            // yang bertahan lama disimpan per-mapel di completedSubjects.
+            examCompleted: false,
             createdAt: nowISO(),
         };
         this.sessions.set(session.token, session);
         return session;
     }
 
-    /* Buka kunci ujian seorang siswa (hanya dipanggil dari endpoint pengawas) */
+    /* Buka kunci ujian seorang siswa (hanya dipanggil dari endpoint pengawas).
+     * V1: mereset SELURUH mapel siswa (resetProgress). Upgrade per-mapel:
+     * bawa argumen examKey bila perlu kelak. */
     resetStudentLock(username) {
-        const found = this.lockedStudents.delete(username);
+        this.resetProgress(username);
         let liveSession = false;
         for (const s of this.sessions.values()) {
             if (s.username === username) {
@@ -115,7 +118,7 @@ class MemoryStore {
                 liveSession = true;
             }
         }
-        return found || liveSession;
+        return liveSession;
     }
 
     /* Buang sesi lama milik username yang sama (dipakai juga oleh SupabaseStore
@@ -147,13 +150,8 @@ class MemoryStore {
         const session = this.sessions.get(token);
         if (!session) return;
         Object.assign(session, state);
-
-        // Kunci ujian disimpan per-username agar tahan login ulang.
-        if (state.examCompleted === true && session.role === "siswa") {
-            this.lockedStudents.add(session.username);
-        } else if (state.examCompleted === false) {
-            this.lockedStudents.delete(session.username);
-        }
+        // Catatan: penyelesaian yang tahan lama (markCompleted) tidak lewat
+        // updateSessionState — dipanggil langsung oleh endpoint di index.js.
     }
 
     /* ---------------- Mapel / PDF ---------------- */
@@ -161,6 +159,45 @@ class MemoryStore {
         // Mode demo: pakai env var config (tidak ada data per kelas)
         const f = config.examFiles[examKey];
         return f ? f.driveFileId || "" : "";
+    }
+
+    /* ---------------- Jadwal (mode demo) ----------------
+     * Tanpa database, SEMUA mapel dianggap terjadwal hari ini agar
+     * token demo TOKENR1/R2/R3 (indonesia/matematika/ipa) tetap jalan. */
+    async getJadwalHariIni() {
+        return Object.entries(config.examFiles)
+            .map(([examKey, f]) => ({
+                examKey,
+                title: f.title,
+                jamMulai: "",
+                jamSelesai: "",
+            }))
+            .sort((a, b) => String(a.title).localeCompare(String(b.title), "id"));
+    }
+
+    async isJadwalAktif(examKey) {
+        return Boolean(config.examFiles[examKey]);
+    }
+
+    /* ---------------- Progres per (siswa, mapel) ---------------- */
+    async getCompletedSubjects(username) {
+        return [...(this.completedSubjects.get(username) || [])];
+    }
+
+    async isCompleted(username, examKey) {
+        const set = this.completedSubjects.get(username);
+        return Boolean(set && set.has(examKey));
+    }
+
+    async markCompleted(username, examKey) {
+        if (!this.completedSubjects.has(username)) {
+            this.completedSubjects.set(username, new Set());
+        }
+        this.completedSubjects.get(username).add(examKey);
+    }
+
+    async resetProgress(username) {
+        this.completedSubjects.delete(username);
     }
 
     /* ---------------- Presensi (siswa) ---------------- */
@@ -419,20 +456,10 @@ class SupabaseStore {
 
     /* ---------------- Sesi ---------------- */
     async createSession({ username, name, role, className, exam, room, examNumber }) {
-        // Siswa yang sudah selesai/keluar tetap terkunci saat login ulang.
-        // Statusnya diwarisi dari baris sesi terakhir milik username ini;
-        // hanya reset oleh pengawas yang membukanya.
-        let locked = false;
-        if (role === "siswa") {
-            const { data: prev } = await this.client
-                .from(this.tables.users)
-                .select("exam_completed")
-                .eq("username", username)
-                .order("created_at", { ascending: false })
-                .limit(1)
-                .maybeSingle();
-            locked = Boolean(prev && prev.exam_completed);
-        }
+        // Sesi baru SELALU mulai dengan percobaan belum selesai. Penyelesaian
+        // yang bertahan lama disimpan per-mapel di tabel `student_progress`;
+        // login ulang tidak boleh mengunci seluruh akun (lihat /api/session
+        // untuk status per-mapel yang benar).
 
         // Satu akun = satu sesi aktif. Baris sesi lama dinonaktifkan dulu,
         // kalau tidak Live Monitor menampilkan siswa yang sama berkali-kali
@@ -461,7 +488,7 @@ class SupabaseStore {
             exam_number: examNumber || null,
             token,
             active: true,
-            exam_completed: locked,
+            exam_completed: false,
         };
 
         const { data, error } = await this.client
@@ -491,8 +518,9 @@ class SupabaseStore {
     }
 
     /* Buka kunci ujian seorang siswa (hanya dipanggil dari endpoint pengawas).
-     * Semua baris sesi milik username ini dibuka, termasuk sesi lama, supaya
-     * login berikutnya tidak mewarisi kunci lagi. */
+     * Semua baris sesi milik username ini dibuka, termasuk sesi lama, dan
+     * progres per-mapel di-reset. V1: mereset SELURUH mapel; upgrade per-mapel
+     * bisa ditambah argumen examKey bila perlu. */
     async resetStudentLock(username) {
         const { data, error } = await this.client
             .from(this.tables.users)
@@ -501,6 +529,7 @@ class SupabaseStore {
             .eq("role", "siswa")
             .select("id");
         if (error) throw error;
+        await this.resetProgress(username);
         this.memory.resetStudentLock(username);
         return Boolean(data && data.length);
     }
@@ -521,6 +550,7 @@ class SupabaseStore {
             tokenValid: data.token_valid || false,
             examKey: data.exam_key || null,
             tokenLabel: data.token_label || null,
+            subjectConfirmed: data.subject_confirmed || false,
             examCompleted: data.exam_completed || false,
             examCompletedAt: data.exam_completed_at || null,
             createdAt: data.created_at || nowISO(),
@@ -556,6 +586,8 @@ class SupabaseStore {
         if (state.tokenValid !== undefined) patch.token_valid = state.tokenValid;
         if (state.examKey !== undefined) patch.exam_key = state.examKey;
         if (state.tokenLabel !== undefined) patch.token_label = state.tokenLabel;
+        if (state.exam !== undefined) patch.exam = state.exam;
+        if (state.subjectConfirmed !== undefined) patch.subject_confirmed = state.subjectConfirmed;
         if (state.examCompleted !== undefined) patch.exam_completed = state.examCompleted;
         if (state.examCompletedAt !== undefined) patch.exam_completed_at = state.examCompletedAt;
 
@@ -623,6 +655,86 @@ class SupabaseStore {
             // fallback ke env var config
         }
         return fallback;
+    }
+
+    /* ---------------- Jadwal (produksi) ----------------
+     * `tanggal` di tabel jadwal_ujian adalah tanggal LOKAL sekolah (WIB).
+     * startOfTodayISO() sudah menerapkan timezoneOffsetMinutes, jadi slice(0,10)
+     * menghasilkan tanggal WIB hari ini — bukan tanggal UTC server. */
+    async getJadwalHariIni() {
+        const today = startOfTodayISO().slice(0, 10);
+        const { data, error } = await this.client
+            .from(this.tables.jadwal)
+            .select("exam_key, jam_mulai, jam_selesai")
+            .eq("tanggal", today)
+            .eq("aktif", true);
+        if (error) throw error;
+        return (data || [])
+            .map((j) => ({
+                examKey: j.exam_key,
+                title: examTitle(j.exam_key),
+                jamMulai: j.jam_mulai || "",
+                jamSelesai: j.jam_selesai || "",
+            }))
+            .sort((a, b) => String(a.jamMulai).localeCompare(String(b.jamMulai), "id"));
+    }
+
+    async isJadwalAktif(examKey) {
+        const today = startOfTodayISO().slice(0, 10);
+        const { data, error } = await this.client
+            .from(this.tables.jadwal)
+            .select("exam_key")
+            .eq("exam_key", examKey)
+            .eq("tanggal", today)
+            .eq("aktif", true)
+            .maybeSingle();
+        if (error) throw error;
+        return Boolean(data);
+    }
+
+    /* ---------------- Progres per (siswa, mapel) ---------------- */
+    async getCompletedSubjects(username) {
+        const { data, error } = await this.client
+            .from(this.tables.progress)
+            .select("exam_key")
+            .eq("username", username)
+            .eq("completed", true);
+        if (error) throw error;
+        return (data || []).map((r) => r.exam_key);
+    }
+
+    async isCompleted(username, examKey) {
+        const { data, error } = await this.client
+            .from(this.tables.progress)
+            .select("completed")
+            .eq("username", username)
+            .eq("exam_key", examKey)
+            .maybeSingle();
+        if (error) throw error;
+        return Boolean(data && data.completed);
+    }
+
+    async markCompleted(username, examKey) {
+        const { error } = await this.client
+            .from(this.tables.progress)
+            .upsert(
+                {
+                    username,
+                    exam_key: examKey,
+                    completed: true,
+                    completed_at: nowISO(),
+                },
+                { onConflict: "username,exam_key" }
+            );
+        if (error) throw error;
+    }
+
+    async resetProgress(username) {
+        const { error } = await this.client
+            .from(this.tables.progress)
+            .delete()
+            .eq("username", username);
+        if (error) throw error;
     }
 
     /* ---------------- Presensi (siswa) ---------------- */

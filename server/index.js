@@ -198,8 +198,8 @@ app.post("/api/login", async (req, res) => {
 });
 
 /* ---------- Info sesi saat ini ---------- */
-app.get("/api/session", requireSession(null), (req, res) => {
-    res.json({
+app.get("/api/session", requireSession(null), async (req, res) => {
+    const body = {
         role: req.session.role,
         name: req.session.name,
         username: req.session.username,
@@ -211,10 +211,29 @@ app.get("/api/session", requireSession(null), (req, res) => {
         beritaAcaraDone: req.session.beritaAcaraDone || false,
         tokenValid: req.session.tokenValid || false,
         tokenLabel: req.session.tokenLabel || null,
+        subjectConfirmed: req.session.subjectConfirmed || false,
         examCompleted: req.session.examCompleted || false,
         examTitle: req.session.examKey ? examTitle(req.session.examKey) : null,
         isAdmin: config.isAdmin(req.session.username),
-    });
+    };
+
+    // Siswa: kirim jadwal hari ini + mapel yang sudah diselesaikan, agar
+    // frontend bisa menampilkan pemilih mapel (ala ANBK). Gagal membaca
+    // jadwal tidak boleh mengagalkan sesi — cukup kirim daftar kosong.
+    if (req.session.role === "siswa") {
+        try {
+            body.todaySubjects = await store.getJadwalHariIni();
+        } catch (e) {
+            body.todaySubjects = [];
+        }
+        try {
+            body.completedSubjects = await store.getCompletedSubjects(req.session.username);
+        } catch (e) {
+            body.completedSubjects = [];
+        }
+    }
+
+    res.json(body);
 });
 
 /* ---------- Selesai ujian (siswa) ---------- */
@@ -231,6 +250,11 @@ app.post("/api/finish", requireSession("siswa"), async (req, res) => {
             examCompleted: true,
             examCompletedAt: req.session.examCompletedAt,
         });
+        // Penyelesaian tahan lama disimpan per (siswa, mapel) — mengunci
+        // mapel ini saja, bukan seluruh akun.
+        if (req.session.examKey) {
+            await store.markCompleted(req.session.username, req.session.examKey);
+        }
     } catch (e) {
         return res.status(500).json({ error: "Gagal menyimpan penyelesaian ujian." });
     }
@@ -254,6 +278,11 @@ app.post("/api/logout", requireSession(null), async (req, res) => {
                 examCompleted: true,
                 examCompletedAt: new Date().toISOString(),
             });
+            // Keluar saat ujian = mapel ini dianggap selesai (per-mapel,
+            // bukan mengunci seluruh akun).
+            if (sess.examKey) {
+                await store.markCompleted(sess.username, sess.examKey);
+            }
             track(req, "selesai_ujian", "Siswa keluar saat ujian berlangsung");
         } catch (e) {
             // abaikan - logout tetap dilanjutkan
@@ -282,6 +311,8 @@ app.post("/api/reset-siswa", requireAdmin(), async (req, res) => {
     }
 
     try {
+        // V1: resetStudentLock juga memanggil resetProgress(username),
+        // jadi seluruh mapel siswa dibuka kembali.
         await store.resetStudentLock(username);
     } catch (e) {
         return res.status(500).json({ error: "Gagal mereset ujian siswa." });
@@ -303,6 +334,11 @@ app.post("/api/pelanggaran-ditangani", requireSession("pengawas"), (req, res) =>
 app.post("/api/presensi", requireSession("siswa"), async (req, res) => {
     if (req.session.examCompleted) {
         return res.status(403).json({ error: "Anda telah menyelesaikan ujian ini." });
+    }
+    // Pemilih mapel wajib sebelum presensi, supaya catatan kehadiran
+    // memakai mapel yang benar (bukan mapel default dari config).
+    if (!req.session.subjectConfirmed) {
+        return res.status(403).json({ error: "Pilih mata pelajaran terlebih dahulu." });
     }
 
     const room = req.session.room;
@@ -448,6 +484,63 @@ app.delete("/api/tokens/:token", requireAdmin(), async (req, res) => {
     return res.json({ ok: true });
 });
 
+/* ---------- Pilih mapel (siswa, sebelum presensi) ---------- */
+app.post("/api/pilih-mapel", requireSession("siswa"), async (req, res) => {
+    if (req.session.examCompleted) {
+        return res.status(403).json({ error: "Anda telah menyelesaikan ujian ini." });
+    }
+
+    const examKey = String((req.body || {}).examKey || "").trim();
+    if (!examKey || !config.examFiles[examKey]) {
+        return res.status(400).json({ error: "Pilih mata pelajaran yang valid." });
+    }
+
+    // Sudah di tengah mengerjakan mapel lain? Jangan ubah pilihan.
+    if (req.session.tokenValid) {
+        return res.status(409).json({ error: "Anda sudah mulai mengerjakan mapel lain. Selesaikan atau keluar terlebih dahulu." });
+    }
+
+    try {
+        if (!(await store.isJadwalAktif(examKey))) {
+            return res.status(403).json({ error: "Mapel tidak terjadwal hari ini." });
+        }
+        if (await store.isCompleted(req.session.username, examKey)) {
+            return res.status(403).json({ error: "Anda telah menyelesaikan mapel ini." });
+        }
+    } catch (e) {
+        return res.status(500).json({ error: "Gagal memvalidasi jadwal mapel." });
+    }
+
+    req.session.exam = examKey;
+    req.session.examKey = examKey;
+    req.session.subjectConfirmed = true;
+    try {
+        await store.updateSessionState(req.sessionToken, {
+            exam: examKey,
+            examKey,
+            subjectConfirmed: true,
+        });
+    } catch (e) {
+        // abaikan - respons tetap sukses
+    }
+
+    let jam = { jamMulai: "", jamSelesai: "" };
+    try {
+        const jadwal = await store.getJadwalHariIni();
+        const row = jadwal.find((j) => j.examKey === examKey);
+        if (row) jam = { jamMulai: row.jamMulai, jamSelesai: row.jamSelesai };
+    } catch (e) { /* abaikan */ }
+
+    track(req, "pilih_mapel", `Mapel dipilih: ${examTitle(examKey)}`);
+    return res.json({
+        ok: true,
+        examKey,
+        examTitle: examTitle(examKey),
+        jamMulai: jam.jamMulai,
+        jamSelesai: jam.jamSelesai,
+    });
+});
+
 /* ---------- Token ujian (siswa) ---------- */
 app.post("/api/token", requireSession("siswa"), async (req, res) => {
     if (req.session.examCompleted) {
@@ -472,12 +565,25 @@ app.post("/api/token", requireSession("siswa"), async (req, res) => {
         return res.status(400).json({ error: "Token tidak valid. Hubungi pengawas ruang ujian." });
     }
 
-    // Validasi token cocok dengan mapel sesi siswa
+    // Validasi token cocok dengan mapel yang DIPILIH siswa
     if (result.examKey !== req.session.exam) {
         track(req, "token_salah_sesi", `Token ${result.label} tidak cocok dengan mapel ${req.session.exam}`);
         return res.status(400).json({
             error: "Token tidak sesuai untuk sesi mapel Anda. Pastikan mengambil token dari pengawas ruang yang benar.",
         });
+    }
+
+    // Defense-in-depth: mapel token harus terjadwal hari ini & belum diselesaikan
+    // (menjaga kalau pemilih mapel dilewati atau jadwal berubah di tengah hari).
+    try {
+        if (!(await store.isJadwalAktif(result.examKey))) {
+            return res.status(403).json({ error: "Mapel tidak terjadwal hari ini." });
+        }
+        if (await store.isCompleted(req.session.username, result.examKey)) {
+            return res.status(403).json({ error: "Anda telah menyelesaikan mapel ini." });
+        }
+    } catch (e) {
+        return res.status(500).json({ error: "Gagal memvalidasi jadwal mapel." });
     }
 
     req.session.tokenValid = true;
@@ -526,6 +632,12 @@ app.get("/api/pdf/:examKey", requireSession("siswa"), async (req, res) => {
     if (req.session.examKey !== examKey) {
         track(req, "akses_ditolak", `Coba akses PDF ${examKey} tanpa izin`);
         return res.status(403).json({ error: "Anda tidak memiliki akses ke berkas ini." });
+    }
+
+    // Per-mapel: mapel yang sudah diselesaikan tidak boleh dibuka lagi.
+    if (await store.isCompleted(req.session.username, examKey)) {
+        track(req, "akses_ditolak", `Coba buka PDF ${examKey} setelah mapel selesai`);
+        return res.status(403).json({ error: "Anda telah menyelesaikan mapel ini." });
     }
 
     const file = config.examFiles[examKey];
@@ -604,6 +716,8 @@ app.post("/api/track", requireSession(null), (req, res) => {
 app.get("/api/monitor", requireSession("pengawas"), async (req, res) => {
     try {
         const snap = await store.getLiveSnapshot();
+        // Jadwal bersifat global (untuk semua ruang) — tidak ikut difilter ruang.
+        snap.jadwal = await store.getJadwalHariIni();
         const c = config.supervisorCredentials.find((x) => x.username === req.session.username);
         const ruang = c && c.room && !config.isAdmin(req.session.username) ? c.room : null;
         if (ruang) {
