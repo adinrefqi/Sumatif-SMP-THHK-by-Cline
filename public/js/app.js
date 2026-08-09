@@ -78,6 +78,7 @@ const EVENT_LABELS = {
     navigasi_diblokir: "Navigasi Diblokir",
     blokir_upload: "Upload Diblokir",
     kehilangan_fokus: "Kehilangan Fokus",
+    pelanggaran_ditangani: "Pelanggaran Ditangani",
 };
 
 const SCREENS = ["screen-login", "screen-monitor", "screen-student"];
@@ -125,6 +126,7 @@ const state = {
     monitorTimer: null,
     monitorLoading: false,
     siswaList: [],       // data siswa terakhir dari /api/monitor (untuk filter & urut)
+    siswaShown: [],      // daftar siswa yang sedang dilihat (dipakai ekspor CSV & cetak)
     keepaliveTimer: null,
     // Untuk deteksi event pelanggaran BARU dari aplikasi Android,
     // lalu tampilkan notifikasi menonjol di dashboard admin/pengawas.
@@ -528,6 +530,7 @@ async function enterSupervisor() {
     try {
         const s = await api("/api/session");
         state.session = Object.assign(state.session, s);
+        state.session.isAdmin = Boolean(s.isAdmin);
     } catch (e) {
         /* abaikan */
     }
@@ -674,14 +677,16 @@ function renderSiswa(list = []) {
             String(a.examNumber || a.name || "").localeCompare(String(b.examNumber || b.name || ""), "id", { numeric: true })
         );
 
+    // Daftar yang sedang dilihat dipakai ekspor CSV & cetak (mengikuti filter aktif).
+    state.siswaShown = shown;
+
     $("siswa-filter-count").textContent = list.length
         ? `${shown.length} dari ${list.length} siswa`
         : "";
 
     if (!shown.length) {
-        body.innerHTML = `<tr class="empty-row"><td colspan="9">${
-            list.length ? "Tidak ada siswa yang cocok dengan filter." : "Belum ada siswa yang masuk."
-        }</td></tr>`;
+        body.innerHTML = `<tr class="empty-row"><td colspan="11">${list.length ? "Tidak ada siswa yang cocok dengan filter." : "Belum ada siswa yang masuk."
+            }</td></tr>`;
         return;
     }
 
@@ -691,15 +696,20 @@ function renderSiswa(list = []) {
                 ? '<span class="badge badge-success">Hadir</span>'
                 : '<span class="badge badge-warn">Belum</span>';
 
-            // Status terakhir yang jujur: selesai > tidak aktif > peristiwa terakhir
+            // Status terakhir yang jujur: belum login > selesai > tidak aktif > peristiwa terakhir
             let status;
-            if (s.examCompleted) {
+            if (!s.sessionId) {
+                status = '<span class="badge badge-muted">Belum hadir</span>';
+            } else if (s.examCompleted) {
                 status = '<span class="badge badge-danger">Selesai</span>';
             } else if (!s.isActive) {
                 status = '<span class="badge badge-muted">Tidak aktif</span>';
             } else {
                 status = statusChip(s.lastEvent);
             }
+
+            // Waktu dibuat satu kolom saja agar tabel tidak melebar terlalu jauh.
+            const jam = (t) => (t ? fmtTime(t) : "—");
 
             return `
                 <tr>
@@ -709,15 +719,21 @@ function renderSiswa(list = []) {
                     <td>${esc(s.room || "-")}</td>
                     <td>${esc(examLabel(s.exam))}</td>
                     <td>${attendance}</td>
+                    <td class="waktu-sel">
+                        <div>Masuk ${jam(s.loginAt)}</div>
+                        <div>Hadir ${jam(s.presensiAt)}</div>
+                        <div>Selesai ${jam(s.selesaiAt)}</div>
+                    </td>
                     <td>${status}</td>
                     <td>
                         ${fmtTime(s.lastAt)}
-                        <div style="color:#8a97a8;font-size:.72rem;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(s.lastDetail || "")}</div>
+                        <div class="baris-sub">${s.halaman ? `Hal. ${esc(s.halaman)} · ` : ""}${esc(s.lastDetail || "")}</div>
                     </td>
-                    <td>${s.examCompleted && s.username
+                    <td>${s.examCompleted && s.username && state.session?.isAdmin
                     ? `<button type="button" class="btn btn-outline btn-xs" data-reset="${esc(s.username)}">Reset</button>`
                     : '<span class="token-sub">—</span>'
                 }</td>
+                    <td class="only-print"></td>
                 </tr>`;
         })
         .join("");
@@ -743,6 +759,87 @@ async function handleResetSiswa(username, btn) {
     } finally {
         setBusy(btn, false);
     }
+}
+
+/* ------------------------------------------------------------------
+   REKAP CSV & CETAK DAFTAR HADIR
+   ------------------------------------------------------------------ */
+/* Satu sel CSV. Selalu dikutip, dan nilai yang diawali =+-@ diberi kutip
+ * tunggal supaya Excel tidak menjalankannya sebagai rumus. */
+function sel(v) {
+    let t = String(v ?? "");
+    if (/^[=+\-@]/.test(t)) t = "'" + t;
+    return `"${t.replace(/"/g, '""')}"`;
+}
+
+function jamCsv(t) {
+    return t ? fmtTime(t).replace("—", "") : "";
+}
+
+/* Unduh rekap mengikuti daftar siswa yang sedang dilihat (state.siswaShown).
+ * Kolom: No. Ujian, Nama, Kelas, Ruang, Mapel, Presensi, Jam Login, Jam Presensi,
+ * Jam Selesai, Halaman, Status. */
+function unduhRekapCsv() {
+    const daftar = state.siswaShown || [];
+    if (!daftar.length) {
+        showToast("Tidak ada data untuk diunduh.");
+        return;
+    }
+
+    const baris = [
+        [
+            "No. Ujian", "Nama", "Kelas", "Ruang", "Mapel",
+            "Presensi", "Jam Login", "Jam Presensi", "Jam Selesai", "Halaman", "Status",
+        ],
+        ...daftar.map((s) => [
+            s.examNumber || "",
+            s.name || "",
+            s.className || "",
+            s.room || "",
+            examLabel(s.exam),
+            s.attendance ? "Hadir" : "Belum",
+            jamCsv(s.loginAt),
+            jamCsv(s.presensiAt),
+            jamCsv(s.selesaiAt),
+            s.halaman || "",
+            (() => {
+                if (!s.sessionId) return "Belum hadir";
+                if (s.examCompleted) return "Selesai";
+                if (!s.isActive) return "Tidak aktif";
+                return eventLabel(s.lastEvent);
+            })(),
+        ]),
+    ];
+
+    // BOM agar Excel membaca nama beraksen dengan benar.
+    const csv = "\uFEFF" + baris.map((r) => r.map(sel).join(",")).join("\r\n");
+    const nama = `presensi-${new Date().toISOString().slice(0, 10)}.csv`;
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = nama;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    showToast("Rekap CSV diunduh.");
+}
+
+/* Cetak panel Daftar Hadir: polling dimatikan agar isi tabel tidak berubah
+ * saat dialog cetak terbuka, lalu dijalankan lagi setelahnya. */
+function cetakPanel(id) {
+    clearInterval(state.monitorTimer);
+    const panel = $(id);
+    panel.classList.add("cetak-target");
+    document.body.classList.add("cetak");
+    window.print();
+    // onafterprint tidak dipanggil konsisten di semua browser.
+    setTimeout(() => {
+        panel.classList.remove("cetak-target");
+        document.body.classList.remove("cetak");
+        startMonitor();
+    }, 800);
 }
 
 function eventDotClass(event) {
@@ -802,6 +899,80 @@ const VIOLATION_EVENTS = new Set([
     "pin_salah",
     "back_diblokir",
 ]);
+
+/* Kunci unik satu pelanggaran. Bentuknya sama dengan yang dipakai
+ * checkForViolationAlerts agar kedua fitur tidak berbeda pendapat
+ * soal "kejadian yang sama". */
+function violationKey(k) {
+    return `${k.sessionId || ""}:${k.event}:${k.at}`;
+}
+
+function renderPelanggaran(kejadian = []) {
+    const container = $("monitor-pelanggaran");
+    if (!container) return;
+
+    // Saring hanya event pelanggaran serius (dari aplikasi Android).
+    const pelanggaran = kejadian.filter((k) => VIOLATION_EVENTS.has(k.event));
+    // Tanda "ditangani" disimpan sebagai event tracking pelanggaran_ditangani
+    // dengan `detail` = kunci pelanggaran yang dimaksud.
+    const ditangani = new Set(
+        kejadian
+            .filter((k) => k.event === "pelanggaran_ditangani")
+            .map((k) => k.detail)
+            .filter(Boolean)
+    );
+
+    const belum = pelanggaran.filter((k) => !ditangani.has(violationKey(k))).length;
+    $("badge-pelanggaran").textContent = String(belum);
+
+    if (!pelanggaran.length) {
+        container.innerHTML = '<div class="log-empty">Tidak ada pelanggaran hari ini.</div>';
+        return;
+    }
+
+    container.innerHTML = pelanggaran
+        .map((k) => {
+            const key = violationKey(k);
+            const sudah = ditangani.has(key);
+            const aksi = sudah
+                ? '<span class="badge badge-success">Ditangani</span>'
+                : `<button type="button" class="btn btn-outline btn-xs no-print" data-tangani="${esc(key)}">Tandai Ditangani</button>`;
+            return `
+                <div class="log-item">
+                    <span class="log-dot ${eventDotClass(k.event)}"></span>
+                    <div class="log-body">
+                        <div class="log-title">
+                            <strong>${esc(k.name || "—")}</strong>
+                            <span>·</span>
+                            <span>${esc(eventLabel(k.event))}</span>
+                        </div>
+                        <div class="log-detail">${esc(k.detail || "")}</div>
+                    </div>
+                    <div class="log-aksi">${aksi}</div>
+                    <span class="log-time">${fmtTime(k.at)}</span>
+                </div>`;
+        })
+        .join("");
+
+    // Wiring tombol "Tandai Ditangani" memakai pola yang sama dengan reset siswa.
+    container.querySelectorAll("[data-tangani]").forEach((btn) => {
+        btn.addEventListener("click", () => handlePelanggaranDitangani(btn.dataset.tangani, btn));
+    });
+}
+
+/* Tandai pelanggaran sudah ditangani oleh pengawas (tercatat di riwayat). */
+async function handlePelanggaranDitangani(key, btn) {
+    setBusy(btn, true);
+    try {
+        await api("/api/pelanggaran-ditangani", { method: "POST", body: { key } });
+        showToast("Pelanggaran ditandai sudah ditangani.");
+        await loadMonitor();
+    } catch (err) {
+        showToast(err.message || "Gagal menandai pelanggaran.");
+    } finally {
+        setBusy(btn, false);
+    }
+}
 
 /**
  * Deteksi event pelanggaran BARU dari aplikasi Android lalu tampilkan
@@ -877,6 +1048,7 @@ async function loadMonitor() {
         renderStats(data.stats);
         renderSiswa(data.siswa);
         renderLog(data.kejadian);
+        renderPelanggaran(data.kejadian);
         renderBeritaAcara(data.beritaAcara);
         // 🚨 Notifikasi pelanggaran dari aplikasi Android di dashboard
         checkForViolationAlerts(data.kejadian);
@@ -968,8 +1140,11 @@ function renderTokens(groups = []) {
                                     <div class="token-sub">${esc(t.createdBy || "pengawas")} • ${fmtTime(t.createdAt)}</div>
                                 </div>
                                 ${usedBadge}
-                                <button type="button" class="btn btn-danger btn-xs" data-del="${esc(t.token)}"
-                                    title="Hapus token ${esc(t.token)}" aria-label="Hapus token ${esc(t.token)}">&times;</button>
+                                ${state.session?.isAdmin
+                            ? `<button type="button" class="btn btn-danger btn-xs" data-del="${esc(t.token)}"
+                                        title="Hapus token ${esc(t.token)}" aria-label="Hapus token ${esc(t.token)}">&times;</button>`
+                            : ""
+                        }
                             </div>`;
                 })
                 .join("");
@@ -1640,7 +1815,7 @@ async function bootstrap() {
         state.role = s.role;
 
         if (s.role === "pengawas") {
-            state.session = { name: s.name, username: s.username, role: s.role, beritaAcaraDone: s.beritaAcaraDone };
+            state.session = { name: s.name, username: s.username, role: s.role, beritaAcaraDone: s.beritaAcaraDone, isAdmin: Boolean(s.isAdmin) };
             await enterSupervisor();
         } else if (s.role === "siswa") {
             state.session = {
@@ -1692,6 +1867,9 @@ function init() {
             showToast("Monitor diperbarui.");
         }
     });
+
+    $("unduh-csv").addEventListener("click", unduhRekapCsv);
+    $("cetak-hadir").addEventListener("click", () => cetakPanel("panel-hadir"));
 
     $("presensi-form").addEventListener("submit", handlePresensiSubmit);
     $("ba-form").addEventListener("submit", handleBaSubmit);

@@ -145,7 +145,8 @@
                     </div>
                 </div>
                 <div class="monitor-header-right">
-                    <span class="live-pill" id="live-pill"><span class="dot"></span><span id="live-pill-text">Real-time</span></span>
+                    <span class="live-pill" id="live-pill"><span class="dot"></span><span
+                            id="live-pill-text">Real-time</span></span>
                     <span class="monitor-fresh" id="monitor-fresh">—</span>
                     <button type="button" id="refresh-monitor" class="btn btn-ghost btn-sm">
                         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
@@ -217,11 +218,32 @@
                 </div>
 
                 <div class="monitor-grid">
-                    <!-- Tabel siswa aktif -->
-                    <div class="panel">
+                    <!-- Tabel siswa aktif (dipakai cetak daftar hadir) -->
+                    <div class="panel" id="panel-hadir">
                         <div class="panel-head">
                             <h2>Siswa Aktif</h2>
-                            <span class="panel-badge" id="badge-siswa-aktif">0</span>
+                            <div class="panel-head-actions">
+                                <button type="button" id="unduh-csv" class="btn btn-ghost btn-sm no-print">
+                                    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor"
+                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                        <polyline points="7 10 12 15 17 10" />
+                                        <line x1="12" y1="15" x2="12" y2="3" />
+                                    </svg>
+                                    Unduh CSV
+                                </button>
+                                <button type="button" id="cetak-hadir" class="btn btn-ghost btn-sm no-print">
+                                    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor"
+                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <polyline points="6 9 6 2 18 2 18 9" />
+                                        <path
+                                            d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+                                        <rect x="6" y="14" width="12" height="8" />
+                                    </svg>
+                                    Cetak
+                                </button>
+                                <span class="panel-badge" id="badge-siswa-aktif">0</span>
+                            </div>
                         </div>
                         <div class="siswa-filter">
                             <div class="input-wrap siswa-filter-search">
@@ -230,8 +252,8 @@
                                     <circle cx="11" cy="11" r="7" />
                                     <path d="m20 20-3.5-3.5" />
                                 </svg>
-                                <input type="search" id="siswa-search" placeholder="Cari nama siswa…"
-                                    autocomplete="off" aria-label="Cari nama siswa" />
+                                <input type="search" id="siswa-search" placeholder="Cari nama siswa…" autocomplete="off"
+                                    aria-label="Cari nama siswa" />
                             </div>
                             <div class="input-wrap">
                                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
@@ -265,17 +287,30 @@
                                         <th>Ruang</th>
                                         <th>Mapel</th>
                                         <th>Presensi</th>
+                                        <th>Waktu</th>
                                         <th>Status</th>
                                         <th>Terakhir</th>
                                         <th>Aksi</th>
+                                        <th class="only-print">Tanda Tangan</th>
                                     </tr>
                                 </thead>
                                 <tbody id="monitor-siswa-body">
                                     <tr class="empty-row">
-                                        <td colspan="9">Belum ada siswa yang masuk.</td>
+                                        <td colspan="11">Belum ada siswa yang masuk.</td>
                                     </tr>
                                 </tbody>
                             </table>
+                        </div>
+                    </div>
+
+                    <!-- Pelanggaran hari ini (persisten, bisa ditandai ditangani) -->
+                    <div class="panel" id="panel-pelanggaran">
+                        <div class="panel-head">
+                            <h2>Pelanggaran Hari Ini</h2>
+                            <span class="panel-badge" id="badge-pelanggaran">0</span>
+                        </div>
+                        <div class="log-list" id="monitor-pelanggaran">
+                            <div class="log-empty">Tidak ada pelanggaran hari ini.</div>
                         </div>
                     </div>
 

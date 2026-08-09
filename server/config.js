@@ -154,48 +154,56 @@ module.exports = {
             password: "thhk2026",
             name: "Adin Refqi L., S.Pd.I., M.Pd.",
             role: "Pengawas",
+            room: "Ruang 1",
         },
         {
             username: "sunedi",
             password: "thhk2026",
             name: "Sunedi Trihatmojo, S.Pd., M.Pd.",
             role: "Pengawas",
+            room: "Ruang 1",
         },
         {
             username: "faizal",
             password: "thhk2026",
             name: "Muchamad Faizal Umar, S.Pd.",
             role: "Pengawas",
+            room: "Ruang 2",
         },
         {
             username: "atmo",
             password: "thhk2026",
             name: "Atmo Kusumo, S.Pd.",
             role: "Pengawas",
+            room: "Ruang 2",
         },
         {
             username: "thevea",
             password: "thhk2026",
             name: "Thevea Yurike R., S.Pd.",
             role: "Pengawas",
+            room: "Ruang 3",
         },
         {
             username: "widaningsih",
             password: "thhk2026",
             name: "Widaningsih, S.Pd.",
             role: "Pengawas",
+            room: "Ruang 3",
         },
         {
             username: "dyfa",
             password: "thhk2026",
             name: "Dyfa Erwinsyah Putra, S.Pd.",
             role: "Pengawas",
+            room: "Ruang 3",
         },
         {
             username: "morys",
             password: "thhk2026",
             name: "Morys Murti Kenti, S.Pd.",
             role: "Pengawas",
+            room: "Ruang 2",
         },
     ],
 
@@ -645,3 +653,10 @@ for (const className of [...new Set(students.map((s) => s.className))].sort()) {
 students.forEach((s, i) => {
     s.examNumber = String(i + 1).padStart(3, "0");
 });
+
+// Siapa yang boleh melakukan aksi merusak (hapus token, reset kunci siswa).
+// Satu definisi, dipakai endpoint maupun self-check.
+module.exports.isAdmin = function (username) {
+    const c = module.exports.supervisorCredentials.find((x) => x.username === username);
+    return Boolean(c && (c.role === "Admin" || c.username === "admin"));
+};

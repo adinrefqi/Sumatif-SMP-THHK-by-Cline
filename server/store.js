@@ -33,6 +33,25 @@ function examTitle(key) {
     return f ? f.title : "Soal Sumatif";
 }
 
+/* Gabungkan daftar peserta resmi (config) dengan sesi yang sudah login.
+ * Peserta yang belum login tetap muncul dengan sessionId null → "Belum hadir". */
+function lengkapiPeserta(masuk) {
+    const byUser = new Map(masuk.map((s) => [s.username, s]));
+    const daftar = config.studentCredentials.map(
+        (c) => byUser.get(c.username) || {
+            sessionId: null, username: c.username, name: c.name,
+            className: c.className, exam: c.exam, room: c.room, examNumber: c.examNumber,
+            attendance: false, examCompleted: false, isActive: false,
+            lastEvent: null, lastDetail: "", lastAt: null, lastSeenAt: null,
+            loginAt: null, presensiAt: null, selesaiAt: null, halaman: null, tokenLabel: null,
+        }
+    );
+    // Sesi yang usernamenya tidak ada lagi di config (siswa dihapus dari daftar
+    // tapi masih duduk di ruang ujian) tetap ditampilkan, jangan dihilangkan.
+    const resmi = new Set(config.studentCredentials.map((c) => c.username));
+    return [...daftar, ...masuk.filter((s) => !resmi.has(s.username))];
+}
+
 /* =========================================================
  * STORE DEMO (in-memory)
  * ========================================================= */
@@ -304,7 +323,10 @@ class MemoryStore {
     }
 
     getTrackingBySession(sessionId) {
-        return this.tracking.filter((t) => t.sessionId === sessionId);
+        // Terbaru dulu: pemanggil selalu memakai elemen [0] sebagai peristiwa terakhir.
+        return this.tracking
+            .filter((t) => t.sessionId === sessionId)
+            .sort((a, b) => (a.at < b.at ? 1 : -1));
     }
 
     /* ---------------- Statistik Live Monitor ---------------- */
@@ -312,11 +334,12 @@ class MemoryStore {
         const sessions = [...this.sessions.values()];
         const now = Date.now();
         const activeWindowMs = 3 * 60 * 1000;
-        const aktif = sessions.filter((s) => s.role === "siswa").map((s) => {
+        const masuk = sessions.filter((s) => s.role === "siswa").map((s) => {
             const trk = this.getTrackingBySession(s.id);
             const last = trk.length ? trk[0] : null;
             const lastAt = last ? last.at : s.createdAt;
             const isActive = Boolean(lastAt && now - new Date(lastAt).getTime() <= activeWindowMs);
+            const hadir = this.getAttendanceBySession(s.id);
             return {
                 sessionId: s.id,
                 username: s.username,
@@ -325,19 +348,27 @@ class MemoryStore {
                 exam: s.exam,
                 room: s.room || null,
                 examNumber: s.examNumber || null,
-                attendance: !!this.getAttendanceBySession(s.id),
+                attendance: !!hadir,
                 examCompleted: Boolean(s.examCompleted),
                 isActive,
                 lastEvent: last ? last.event : "login",
                 lastDetail: last ? last.detail : "-",
                 lastAt,
                 lastSeenAt: lastAt,
+                // Waktu penting ditampilkan di tabel kolom "Waktu".
+                loginAt: s.createdAt || null,
+                presensiAt: hadir ? hadir.confirmedAt : null,
+                selesaiAt: s.examCompletedAt || null,
+                // Halaman PDF terakhir yang dikunjungi siswa (dari tracking).
+                halaman: (trk.find((t) => t.page) || {}).page || null,
+                tokenLabel: s.tokenLabel || null,
             };
         });
+        // Peserta resmi yang belum login tetap tampil → "Belum hadir".
+        const peserta = lengkapiPeserta(masuk);
 
-        const aktifCount = aktif.filter((s) => s.isActive && !s.examCompleted).length;
+        const aktifCount = peserta.filter((s) => s.isActive && !s.examCompleted).length;
 
-        const pengawas = sessions.filter((s) => s.role === "pengawas").map((s) => ({ ...s }));
         const kejadianHariIni = this.getTracking();
 
         return {
@@ -345,15 +376,14 @@ class MemoryStore {
             stats: {
                 // Sumbernya sama dengan tabel Siswa Aktif agar kartu dan tabel
                 // tidak pernah bertentangan.
-                totalSiswaLogin: aktif.filter((s) => s.attendance).length,
+                totalSiswaLogin: peserta.filter((s) => s.attendance).length,
                 totalSiswaAktif: aktifCount,
                 totalBeritaAcara: this.beritaAcara.length,
                 totalTokensDipakai: this.tokenUses.size,
                 totalTokenValid: this.tokens.size,
                 totalPeristiwa: kejadianHariIni.length,
             },
-            siswa: aktif,
-            pengawas,
+            siswa: peserta,
             beritaAcara: [...this.beritaAcara].reverse(),
             kejadian: kejadianHariIni,
         };
@@ -907,6 +937,7 @@ class SupabaseStore {
                     .select("session_id, student_name, user_role, event, detail, page, created_at")
                     .gte("created_at", awalHari)
                     .order("created_at", { ascending: false })
+                    // ponytail: plafon 200 baris tracking; naikkan limit kalau halaman terakhir mulai kosong.
                     .limit(200),
                 this.client
                     .from(this.tables.users)
@@ -915,7 +946,7 @@ class SupabaseStore {
                     .eq("active", true),
                 this.client
                     .from(this.tables.attendance)
-                    .select("session_id"),
+                    .select("session_id, confirmed_at"),
                 this.client
                     .from(this.tables.tokens)
                     .select("token"),
@@ -958,7 +989,7 @@ class SupabaseStore {
 
             // Siswa aktif dihitung dari tabel `users` (bukan memory per-instance).
             // lastEvent/lastAt diambil dari baris tracking paling baru per sesi.
-            const hadirSet = new Set((attendanceRes.data || []).map((a) => a.session_id));
+            const hadirMap = new Map((attendanceRes.data || []).map((a) => [a.session_id, a.confirmed_at]));
             const tokenCount = (tokenRes.data || []).length;
             const students = (usersRes.data || []).map((u) => {
                 const trk = this.getTrackingBySession(u.id);
@@ -973,23 +1004,32 @@ class SupabaseStore {
                     exam: u.exam,
                     room: u.room || null,
                     examNumber: u.exam_number || null,
-                    attendance: hadirSet.has(u.id),
+                    attendance: hadirMap.has(u.id),
                     examCompleted: Boolean(u.exam_completed),
                     isActive,
                     lastEvent: last ? last.event : "login",
                     lastDetail: last ? last.detail : "-",
                     lastAt,
                     lastSeenAt: lastAt,
+                    // Waktu penting ditampilkan di tabel kolom "Waktu".
+                    loginAt: u.created_at || null,
+                    presensiAt: hadirMap.get(u.id) || null,
+                    selesaiAt: u.exam_completed_at || null,
+                    // Halaman PDF terakhir yang dikunjungi siswa (dari tracking).
+                    halaman: (trk.find((t) => t.page) || {}).page || null,
+                    tokenLabel: u.token_label || null,
                 };
             });
+            // Peserta resmi yang belum login tetap tampil → "Belum hadir".
+            const peserta = lengkapiPeserta(students);
 
-            const aktifCount = students.filter((s) => s.isActive && !s.examCompleted).length;
+            const aktifCount = peserta.filter((s) => s.isActive && !s.examCompleted).length;
 
             const stats = {
                 // Dihitung dari daftar siswa yang sama dengan tabel di dashboard,
                 // bukan dari seluruh baris presensi sepanjang masa. Kalau tidak,
                 // kartu bisa menampilkan "10 Siswa Presensi" saat tabelnya kosong.
-                totalSiswaLogin: students.filter((s) => s.attendance).length,
+                totalSiswaLogin: peserta.filter((s) => s.attendance).length,
                 totalSiswaAktif: aktifCount,
                 totalBeritaAcara: this.memory.beritaAcara.length,
                 totalTokensDipakai: this._tokenUsesCache.size,
@@ -1003,8 +1043,7 @@ class SupabaseStore {
             return {
                 generatedAt: nowISO(),
                 stats,
-                siswa: students,
-                pengawas: [],
+                siswa: peserta,
                 beritaAcara: [...this.memory.beritaAcara].reverse(),
                 kejadian: this.memory.getTracking(),
             };

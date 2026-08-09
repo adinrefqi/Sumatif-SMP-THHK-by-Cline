@@ -70,6 +70,18 @@ function requireSession(role) {
     };
 }
 
+/* Aksi merusak khusus Admin. Pengawas biasa cukup memantau. */
+function requireAdmin() {
+    const guard = requireSession("pengawas");
+    return (req, res, next) =>
+        guard(req, res, () => {
+            if (!config.isAdmin(req.session.username)) {
+                return res.status(403).json({ error: "Aksi ini khusus Administrator." });
+            }
+            next();
+        });
+}
+
 function examTitle(key) {
     const f = config.examFiles[key];
     return f ? f.title : "Soal Sumatif";
@@ -137,7 +149,7 @@ app.post("/api/login", async (req, res) => {
 
             // ADMIN SUPER USER: langsung masuk dashboard tanpa
             // diwajibkan mengisi Berita Acara.
-            if (found.role === "Admin" || found.username === "admin") {
+            if (config.isAdmin(found.username)) {
                 await store.updateSessionState(session.token, { beritaAcaraDone: true }).catch(() => { });
             }
 
@@ -201,6 +213,7 @@ app.get("/api/session", requireSession(null), (req, res) => {
         tokenLabel: req.session.tokenLabel || null,
         examCompleted: req.session.examCompleted || false,
         examTitle: req.session.examKey ? examTitle(req.session.examKey) : null,
+        isAdmin: config.isAdmin(req.session.username),
     });
 });
 
@@ -256,8 +269,8 @@ app.post("/api/logout", requireSession(null), async (req, res) => {
     return res.json({ ok: true });
 });
 
-/* ---------- Reset kunci ujian siswa (pengawas/admin) ---------- */
-app.post("/api/reset-siswa", requireSession("pengawas"), async (req, res) => {
+/* ---------- Reset kunci ujian siswa (khusus admin) ---------- */
+app.post("/api/reset-siswa", requireAdmin(), async (req, res) => {
     const username = String((req.body || {}).username || "").trim();
     if (!username) {
         return res.status(400).json({ error: "Username siswa wajib diisi." });
@@ -276,6 +289,14 @@ app.post("/api/reset-siswa", requireSession("pengawas"), async (req, res) => {
 
     track(req, "reset_ujian", `${req.session.name} mereset ujian ${siswa.name}`);
     return res.json({ ok: true, name: siswa.name });
+});
+
+/* ---------- Tandai pelanggaran sudah ditangani (pengawas) ---------- */
+app.post("/api/pelanggaran-ditangani", requireSession("pengawas"), (req, res) => {
+    const key = String((req.body || {}).key || "").trim();
+    if (!key) return res.status(400).json({ error: "Kunci pelanggaran wajib diisi." });
+    track(req, "pelanggaran_ditangani", key);
+    return res.json({ ok: true });
 });
 
 /* ---------- Presensi (siswa) ---------- */
@@ -401,7 +422,7 @@ app.post("/api/tokens", requireSession("pengawas"), async (req, res) => {
     }
 });
 
-app.delete("/api/tokens/:token", requireSession("pengawas"), async (req, res) => {
+app.delete("/api/tokens/:token", requireAdmin(), async (req, res) => {
     const token = String(req.params.token || "").trim().toUpperCase();
     if (!token) {
         return res.status(400).json({ error: "Token tidak valid." });
@@ -571,7 +592,21 @@ app.post("/api/track", requireSession(null), (req, res) => {
 /* ---------- Live Monitor (pengawas) ---------- */
 app.get("/api/monitor", requireSession("pengawas"), async (req, res) => {
     try {
-        return res.json(await store.getLiveSnapshot());
+        const snap = await store.getLiveSnapshot();
+        const c = config.supervisorCredentials.find((x) => x.username === req.session.username);
+        const ruang = c && c.room && !config.isAdmin(req.session.username) ? c.room : null;
+        if (ruang) {
+            snap.siswa = snap.siswa.filter((s) => s.room === ruang);
+            // Riwayat & pelanggaran ikut disaring agar tidak timpang dengan tabel:
+            // simpan kejadian milik siswa di ruang ini, plus kejadian non-siswa
+            // (token dibuat, berita acara, reset) yang memang lingkupnya global.
+            const sesi = new Set(snap.siswa.map((s) => s.sessionId).filter(Boolean));
+            snap.kejadian = snap.kejadian.filter((k) => k.role !== "siswa" || sesi.has(k.sessionId));
+            snap.stats.totalSiswaLogin = snap.siswa.filter((s) => s.attendance).length;
+            snap.stats.totalSiswaAktif = snap.siswa.filter((s) => s.isActive && !s.examCompleted).length;
+            snap.stats.totalPeristiwa = snap.kejadian.length;
+        }
+        return res.json(snap);
     } catch (e) {
         return res.status(500).json({ error: "Gagal memuat data monitor." });
     }

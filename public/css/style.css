@@ -1601,7 +1601,7 @@ textarea:focus {
     flex-wrap: wrap;
 }
 
-.viewer-controls > * {
+.viewer-controls>* {
     flex-shrink: 0;
 }
 
@@ -2125,6 +2125,7 @@ body.pdf-fullscreen-open {
 }
 
 @media (prefers-reduced-motion: reduce) {
+
     *,
     *::before,
     *::after {
@@ -2145,4 +2146,75 @@ body.pdf-fullscreen-open {
 
 .pdf-canvas-wrap {
     -webkit-touch-callout: none;
+}
+
+/* ---------- Tabel monitor: baris sub & kolom waktu ---------- */
+.baris-sub {
+    color: #8a97a8;
+    font-size: 0.72rem;
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.waktu-sel {
+    font-size: 0.78rem;
+    line-height: 1.45;
+    white-space: nowrap;
+    color: var(--muted);
+}
+
+/* ---------- Tombol aksi pada baris pelanggaran ---------- */
+.log-aksi {
+    flex-shrink: 0;
+}
+
+/* ---------- Aksi pada panel-head (Unduh CSV, Cetak) ---------- */
+.panel-head-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* ============================================================
+   CETAK & EKSPOR DAFTAR HADIR (Fitur 3)
+   ============================================================ */
+.only-print {
+    display: none;
+}
+
+@media print {
+
+    .bg-blob,
+    .monitor-header-right,
+    .siswa-filter,
+    .no-print {
+        display: none !important;
+    }
+
+    /* Hanya panel bertanda .cetak-target yang ikut tercetak.
+       :has() native CSS — panel tidak perlu dipindah keluar .monitor-grid. */
+    body.cetak .panel:not(:has(.cetak-target)) {
+        display: none !important;
+    }
+
+    .only-print {
+        display: table-cell;
+    }
+
+    body {
+        background: #fff;
+    }
+
+    .monitor-body,
+    .screen-monitor {
+        padding: 0;
+        max-width: none;
+    }
+
+    .panel {
+        border: none;
+        box-shadow: none;
+    }
 }
