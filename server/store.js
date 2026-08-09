@@ -44,6 +44,7 @@ function lengkapiPeserta(masuk) {
             attendance: false, examCompleted: false, isActive: false,
             lastEvent: null, lastDetail: "", lastAt: null, lastSeenAt: null,
             loginAt: null, presensiAt: null, selesaiAt: null, halaman: null, tokenLabel: null,
+            signature: null,
         }
     );
     // Sesi yang usernamenya tidak ada lagi di config (siswa dihapus dari daftar
@@ -163,7 +164,7 @@ class MemoryStore {
     }
 
     /* ---------------- Presensi (siswa) ---------------- */
-    addAttendance({ sessionId, name, className, examKey, examTitle, room }) {
+    addAttendance({ sessionId, name, className, examKey, examTitle, room, signature }) {
         const record = {
             id: generateId("hadir"),
             sessionId,
@@ -173,6 +174,7 @@ class MemoryStore {
             examTitle,
             room,
             confirmedAt: nowISO(),
+            signature: signature || null,
         };
         this.attendance.push(record);
         return record;
@@ -358,6 +360,7 @@ class MemoryStore {
                 // Waktu penting ditampilkan di tabel kolom "Waktu".
                 loginAt: s.createdAt || null,
                 presensiAt: hadir ? hadir.confirmedAt : null,
+                signature: hadir ? hadir.signature || null : null,
                 selesaiAt: s.examCompletedAt || null,
                 // Halaman PDF terakhir yang dikunjungi siswa (dari tracking).
                 halaman: (trk.find((t) => t.page) || {}).page || null,
@@ -623,7 +626,7 @@ class SupabaseStore {
     }
 
     /* ---------------- Presensi (siswa) ---------------- */
-    async addAttendance({ sessionId, name, className, examKey, examTitle, room }) {
+    async addAttendance({ sessionId, name, className, examKey, examTitle, room, signature }) {
         const payload = {
             session_id: sessionId,
             student_name: name,
@@ -631,6 +634,7 @@ class SupabaseStore {
             exam_key: examKey || null,
             exam_title: examTitle || null,
             room,
+            signature: signature || null,
         };
 
         const { data, error } = await this.client
@@ -649,6 +653,7 @@ class SupabaseStore {
             examTitle: data.exam_title,
             room: data.room,
             confirmedAt: data.confirmed_at,
+            signature: data.signature || null,
         };
         this.memory.attendance.push(record);
         return record;
@@ -677,6 +682,7 @@ class SupabaseStore {
             examTitle: data.exam_title,
             room: data.room,
             confirmedAt: data.confirmed_at,
+            signature: data.signature || null,
         };
         this.memory.attendance.push(record);
         return record;
@@ -946,7 +952,7 @@ class SupabaseStore {
                     .eq("active", true),
                 this.client
                     .from(this.tables.attendance)
-                    .select("session_id, confirmed_at"),
+                    .select("session_id, confirmed_at, signature"),
                 this.client
                     .from(this.tables.tokens)
                     .select("token"),
@@ -989,7 +995,7 @@ class SupabaseStore {
 
             // Siswa aktif dihitung dari tabel `users` (bukan memory per-instance).
             // lastEvent/lastAt diambil dari baris tracking paling baru per sesi.
-            const hadirMap = new Map((attendanceRes.data || []).map((a) => [a.session_id, a.confirmed_at]));
+            const hadirMap = new Map((attendanceRes.data || []).map((a) => [a.session_id, a]));
             const tokenCount = (tokenRes.data || []).length;
             const students = (usersRes.data || []).map((u) => {
                 const trk = this.getTrackingBySession(u.id);
@@ -1013,7 +1019,8 @@ class SupabaseStore {
                     lastSeenAt: lastAt,
                     // Waktu penting ditampilkan di tabel kolom "Waktu".
                     loginAt: u.created_at || null,
-                    presensiAt: hadirMap.get(u.id) || null,
+                    presensiAt: hadirMap.get(u.id)?.confirmed_at || null,
+                    signature: hadirMap.get(u.id)?.signature || null,
                     selesaiAt: u.exam_completed_at || null,
                     // Halaman PDF terakhir yang dikunjungi siswa (dari tracking).
                     halaman: (trk.find((t) => t.page) || {}).page || null,

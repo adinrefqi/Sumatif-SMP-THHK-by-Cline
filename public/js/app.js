@@ -685,7 +685,7 @@ function renderSiswa(list = []) {
         : "";
 
     if (!shown.length) {
-        body.innerHTML = `<tr class="empty-row"><td colspan="11">${list.length ? "Tidak ada siswa yang cocok dengan filter." : "Belum ada siswa yang masuk."
+        body.innerHTML = `<tr class="empty-row"><td colspan="10">${list.length ? "Tidak ada siswa yang cocok dengan filter." : "Belum ada siswa yang masuk."
             }</td></tr>`;
         return;
     }
@@ -733,7 +733,6 @@ function renderSiswa(list = []) {
                     ? `<button type="button" class="btn btn-outline btn-xs" data-reset="${esc(s.username)}">Reset</button>`
                     : '<span class="token-sub">—</span>'
                 }</td>
-                    <td class="only-print"></td>
                 </tr>`;
         })
         .join("");
@@ -826,18 +825,162 @@ function unduhRekapCsv() {
     showToast("Rekap CSV diunduh.");
 }
 
-/* Cetak panel Daftar Hadir: polling dimatikan agar isi tabel tidak berubah
- * saat dialog cetak terbuka, lalu dijalankan lagi setelahnya. */
-function cetakPanel(id) {
+/* ------------------------------------------------------------------
+   CETAK DAFTAR HADIR (Lembar khusus per ruang)
+   ------------------------------------------------------------------ */
+/* "2026-08-09" → "9 Agustus 2026". Dipecah manual, bukan new Date(str),
+ * supaya tanggalnya tidak bergeser sehari akibat penguraian sebagai UTC. */
+function tanggalPanjang(v) {
+    if (!v) return "";
+    const [y, m, d] = String(v).split("-").map(Number);
+    if (!y || !m || !d) return v;
+    return new Date(y, m - 1, d).toLocaleDateString("id-ID", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+    });
+}
+
+/* Rakit satu lembar daftar hadir untuk satu ruang. */
+function lembarHadir(ruang, peserta, opsi) {
+    const baris = peserta
+        .slice()
+        // Urutan baris: nomor ujian menaik (nomor urut ujian, bukan abjad).
+        .sort((a, b) => String(a.examNumber || "").localeCompare(String(b.examNumber || ""), "id", { numeric: true }))
+        .map((s, i) => `
+                <tr>
+                    <td>${i + 1}</td>
+                    <td>${esc(s.examNumber || "-")}</td>
+                    <td>${esc(s.name || "")}</td>
+                    <td>${esc(s.className || "")}</td>
+                    <td class="tanda-tangan">${s.signature
+                ? `<img class="ttd-img" src="${esc(s.signature)}" alt="Tanda tangan ${esc(s.name || "")}" />`
+                : ""
+            }</td>
+                </tr>`)
+        .join("");
+
+    return `
+        <div class="lembar">
+            <div class="lembar-kop">
+                <img src="logo.png" alt="" />
+                <div>
+                    <h1>SMP TUNAS HIDUP HARAPAN KITA</h1>
+                    <p>Yayasan Tri Dharma — Penilaian Sumatif Akhir Semester</p>
+                </div>
+            </div>
+            <h2>DAFTAR HADIR PESERTA PENILAIAN SUMATIF</h2>
+            <div class="lembar-info">
+                <div><span>Ruang:</span> ${esc(ruang)}</div>
+                <div><span>Mata Pelajaran:</span> ${esc(opsi.mapel || "")}</div>
+                <div><span>Tanggal:</span> ${esc(tanggalPanjang(opsi.tanggal))}</div>
+                <div><span>Waktu:</span> ${esc(opsi.waktu || "")}</div>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>No</th>
+                        <th>No. Ujian</th>
+                        <th>Nama</th>
+                        <th>Kelas</th>
+                        <th>Tanda Tangan</th>
+                    </tr>
+                </thead>
+                <tbody>${baris}</tbody>
+            </table>
+            <div class="lembar-kaki">
+                <div>Jumlah peserta: ${peserta.length}</div>
+                <div class="lembar-ttd">
+                    <div>Pengawas,</div>
+                    <div class="garis"></div>
+                    <div>${esc(opsi.pengawas || "")}</div>
+                    <div>Tanggal: ${esc(tanggalPanjang(opsi.tanggal))}</div>
+                </div>
+            </div>
+        </div>`;
+}
+
+/* Isi pilihan Ruang pada modal cetak dari data terbaru.
+ * Pola sama dengan syncFilterOptions — tidak menulis daftar ruang secara keras. */
+function populateCetakRuang() {
+    const select = $("cetak-ruang");
+    const rooms = [...new Set(state.siswaList.map((s) => s.room).filter(Boolean))].sort((a, b) =>
+        String(a).localeCompare(String(b), "id", { numeric: true })
+    );
+    select.innerHTML =
+        `<option value="">Semua Ruang</option>` +
+        rooms.map((r) => `<option value="${esc(r)}">${esc(r)}</option>`).join("");
+}
+
+/* Buka modal cetak: isi pilihan ruang dan nilai default dari sesi. */
+function bukaModalCetak() {
+    populateCetakRuang();
+    const today = new Date();
+    $("cetak-tanggal").value =
+        `${today.getFullYear()}-` +
+        `${String(today.getMonth() + 1).padStart(2, "0")}-` +
+        `${String(today.getDate()).padStart(2, "0")}`;
+    $("cetak-pengawas").value = state.session?.name || "";
+    openModal("modal-cetak");
+}
+
+/* Kumpulkan peserta per ruang sesuai pilihan modal, rakit lembarnya, lalu cetak. */
+function cetakDaftarHadir(e) {
+    e.preventDefault();
+    const btn = $("cetak-submit");
+    setBusy(btn, true);
+
+    const ruang = $("cetak-ruang").value;
+    const opsi = {
+        mapel: $("cetak-mapel").value.trim(),
+        tanggal: $("cetak-tanggal").value,
+        waktu: $("cetak-waktu").value.trim(),
+        pengawas: $("cetak-pengawas").value.trim() || state.session?.name || "",
+    };
+
+    // Sumber data state.siswaList, bukan siswaShown — cetak administrasi tidak
+    // boleh ikut terpengaruh kotak pencarian yang kebetulan terisi di dashboard.
+    const sumber = state.siswaList || [];
+
+    // Kelompokkan peserta per ruang; peserta tanpa ruang dikumpulkan ke
+    // "Tanpa Ruang" supaya data yang perlu dibetulkan tidak hilang diam-diam.
+    const perRuang = new Map();
+    for (const s of sumber) {
+        const r = s.room || "Tanpa Ruang";
+        if (!perRuang.has(r)) perRuang.set(r, []);
+        perRuang.get(r).push(s);
+    }
+
+    const rooms = ruang
+        ? [ruang]
+        : [...perRuang.keys()].sort((a, b) =>
+            String(a).localeCompare(String(b), "id", { numeric: true })
+        );
+
+    // Ruang tanpa peserta tidak menghasilkan lembar.
+    const lembar = rooms
+        .filter((r) => (perRuang.get(r) || []).length > 0)
+        .map((r) => lembarHadir(r, perRuang.get(r), opsi))
+        .join("");
+
+    if (!lembar) {
+        showToast("Tidak ada peserta untuk ruang yang dipilih.");
+        setBusy(btn, false);
+        return;
+    }
+
+    // Polling dimatikan supaya isi tidak berubah saat dialog cetak terbuka.
     clearInterval(state.monitorTimer);
-    const panel = $(id);
-    panel.classList.add("cetak-target");
-    document.body.classList.add("cetak");
+    $("lembar-cetak").innerHTML = lembar;
+    document.body.classList.add("cetak-lembar");
+    closeModal("modal-cetak");
     window.print();
-    // onafterprint tidak dipanggil konsisten di semua browser.
+    // onafterprint tidak dipanggil konsisten di semua browser, jadi pakai timer.
     setTimeout(() => {
-        panel.classList.remove("cetak-target");
-        document.body.classList.remove("cetak");
+        document.body.classList.remove("cetak-lembar");
+        $("lembar-cetak").innerHTML = "";
+        // Tombol harus pulih, kalau tidak cetakan kedua mustahil sampai halaman di-reload.
+        setBusy(btn, false);
         startMonitor();
     }, 800);
 }
@@ -1292,6 +1435,73 @@ function renderAttendanceNeeded() {
     $("open-presensi-btn").addEventListener("click", openPresensiModal);
 }
 
+/* ---------- Tanda tangan digital ---------- */
+const TTD_DRAWING = "_ttd_drawing";
+function setupTtdCanvas() {
+    const canvas = $("ttd-canvas");
+    if (!canvas) return;
+    clearTtdCanvas();
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    let drawing = false;
+    const pos = (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        const src = e.touches && e.touches[0] ? e.touches[0] : e;
+        return { x: (src.clientX - rect.left) * scaleX, y: (src.clientY - rect.top) * scaleY };
+    };
+    const start = (e) => {
+        e.preventDefault();
+        drawing = true;
+        state[TTD_DRAWING] = true;
+        const p = pos(e);
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y);
+        ctx.lineWidth = 2.5;
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        ctx.strokeStyle = "#1b2430";
+    };
+    const move = (e) => {
+        if (!drawing) return;
+        e.preventDefault();
+        const p = pos(e);
+        ctx.lineTo(p.x, p.y);
+        ctx.stroke();
+    };
+    const stop = (e) => {
+        if (!drawing) return;
+        e.preventDefault();
+        drawing = false;
+        ctx.beginPath();
+    };
+
+    canvas.addEventListener("mousedown", start);
+    canvas.addEventListener("mousemove", move);
+    canvas.addEventListener("mouseup", stop);
+    canvas.addEventListener("mouseleave", stop);
+    canvas.addEventListener("touchstart", start, { passive: false });
+    canvas.addEventListener("touchmove", move, { passive: false });
+    canvas.addEventListener("touchend", stop);
+}
+
+function clearTtdCanvas() {
+    const canvas = $("ttd-canvas");
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+    state[TTD_DRAWING] = false;
+}
+
+/* Hasilkan data URL PNG tanda tangan; kosong bila belum digambar. */
+function ttdDataUrl() {
+    const canvas = $("ttd-canvas");
+    if (!canvas || !state[TTD_DRAWING]) return "";
+    return canvas.toDataURL("image/png");
+}
+
 /* ---------- Presensi wajib ---------- */
 function openPresensiModal() {
     $("presensi-name").textContent = state.session.name;
@@ -1300,6 +1510,7 @@ function openPresensiModal() {
     $("presensi-exam").textContent = examLabel(state.session.exam || state.examKey);
     $("presensi-room").value = state.session.room || "";
 
+    setupTtdCanvas();
     openModal("modal-presensi");
     setTimeout(() => $("presensi-room") && $("presensi-room").focus(), 60);
 }
@@ -1317,12 +1528,19 @@ async function handlePresensiSubmit(e) {
         return;
     }
 
+    // Tanda tangan digital wajib digambar sebelum presensi dikirim.
+    const signature = ttdDataUrl();
+    if (!signature) {
+        showError($("presensi-error"), "Gambar tanda tangan Anda terlebih dahulu.");
+        return;
+    }
+
     const btn = $("presensi-submit");
     setBusy(btn, true);
     clearError($("presensi-error"));
 
     try {
-        await api("/api/presensi", { method: "POST", body: { room } });
+        await api("/api/presensi", { method: "POST", body: { room, signature } });
         state.session.attendanceDone = true;
         closeModal("modal-presensi");
         showToast(`Presensi berhasil untuk ruang ${esc(room)}.`);
@@ -1861,6 +2079,7 @@ function init() {
     for (const id of ["siswa-search", "siswa-filter-ruang", "siswa-filter-kelas"]) {
         $(id).addEventListener("input", () => renderSiswa(state.siswaList));
     }
+    $("ttd-ulang").addEventListener("click", clearTtdCanvas);
     $("refresh-monitor").addEventListener("click", async () => {
         await Promise.all([loadMonitor(), loadTokens()]);
         if (!$("live-pill")?.classList.contains("stale")) {
@@ -1868,8 +2087,10 @@ function init() {
         }
     });
 
-    $("unduh-csv").addEventListener("click", unduhRekapCsv);
-    $("cetak-hadir").addEventListener("click", () => cetakPanel("panel-hadir"));
+    $("btn-unduh-csv").addEventListener("click", unduhRekapCsv);
+    $("btn-cetak-hadir").addEventListener("click", bukaModalCetak);
+    $("cetak-batal").addEventListener("click", () => closeModal("modal-cetak"));
+    $("cetak-form").addEventListener("submit", cetakDaftarHadir);
 
     $("presensi-form").addEventListener("submit", handlePresensiSubmit);
     $("ba-form").addEventListener("submit", handleBaSubmit);

@@ -57,8 +57,22 @@ async function main() {
     const siswaSesi = await r.json();
     assert.ok(siswaSesi.room, "siswa harus punya ruang");
 
-    r = await api("/api/presensi", { method: "POST", body: { room: siswaSesi.room } });
+    // TTD digital minimal 1×1 piksel PNG data URL agar lolos validasi server.
+    const sig = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+    r = await api("/api/presensi", { method: "POST", body: { room: siswaSesi.room, signature: sig } });
     assert.strictEqual(r.status, 200, "presensi harus 200");
+
+    // Tanpa TTD harus ditolak (400).
+    r = await api("/api/login", { method: "POST", body: { role: "siswa", username: "siswa3", password: "rahasia123" } });
+    r = await api("/api/presensi", { method: "POST", body: { room: "Ruang 1" } });
+    assert.strictEqual(r.status, 400, "presensi tanpa tanda tangan harus 400");
+
+    // Kembali login siswa2 (cookie jar hanya satu). Sesi baru = presensi baru,
+    // supaya baris monitor tetap punya presensiAt & signature.
+    r = await api("/api/login", { method: "POST", body: { role: "siswa", username: "siswa2", password: "rahasia123" } });
+    assert.strictEqual(r.status, 200, "login ulang siswa2 harus 200");
+    r = await api("/api/presensi", { method: "POST", body: { room: "Ruang 1", signature: sig } });
+    assert.strictEqual(r.status, 200, "presensi ulang siswa2 harus 200");
     r = await api("/api/token", { method: "POST", body: { token: "TOKENR2" } });
     assert.strictEqual(r.status, 200, "token TOKENR2 harus valid untuk siswa2 (matematika)");
     r = await api("/api/track", { method: "POST", body: { event: "pdf_halaman", detail: "hal 7", page: 7 } });

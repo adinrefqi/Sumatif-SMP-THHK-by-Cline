@@ -218,32 +218,39 @@
                 </div>
 
                 <div class="monitor-grid">
-                    <!-- Tabel siswa aktif (dipakai cetak daftar hadir) -->
+                    <!-- Administrasi & cetak — selalu terlihat tanpa menggulung -->
+                    <div class="panel">
+                        <div class="panel-head">
+                            <h2>Administrasi & Cetak</h2>
+                        </div>
+                        <div class="admin-actions">
+                            <button type="button" id="btn-cetak-hadir" class="btn btn-primary">
+                                <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="6 9 6 2 18 2 18 9" />
+                                    <path
+                                        d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+                                    <rect x="6" y="14" width="12" height="8" />
+                                </svg>
+                                Cetak Daftar Hadir
+                            </button>
+                            <button type="button" id="btn-unduh-csv" class="btn btn-ghost">
+                                <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                    <polyline points="7 10 12 15 17 10" />
+                                    <line x1="12" y1="15" x2="12" y2="3" />
+                                </svg>
+                                Unduh CSV
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Tabel siswa aktif -->
                     <div class="panel" id="panel-hadir">
                         <div class="panel-head">
                             <h2>Siswa Aktif</h2>
-                            <div class="panel-head-actions">
-                                <button type="button" id="unduh-csv" class="btn btn-ghost btn-sm no-print">
-                                    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor"
-                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                                        <polyline points="7 10 12 15 17 10" />
-                                        <line x1="12" y1="15" x2="12" y2="3" />
-                                    </svg>
-                                    Unduh CSV
-                                </button>
-                                <button type="button" id="cetak-hadir" class="btn btn-ghost btn-sm no-print">
-                                    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor"
-                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <polyline points="6 9 6 2 18 2 18 9" />
-                                        <path
-                                            d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
-                                        <rect x="6" y="14" width="12" height="8" />
-                                    </svg>
-                                    Cetak
-                                </button>
-                                <span class="panel-badge" id="badge-siswa-aktif">0</span>
-                            </div>
+                            <span class="panel-badge" id="badge-siswa-aktif">0</span>
                         </div>
                         <div class="siswa-filter">
                             <div class="input-wrap siswa-filter-search">
@@ -291,12 +298,11 @@
                                         <th>Status</th>
                                         <th>Terakhir</th>
                                         <th>Aksi</th>
-                                        <th class="only-print">Tanda Tangan</th>
                                     </tr>
                                 </thead>
                                 <tbody id="monitor-siswa-body">
                                     <tr class="empty-row">
-                                        <td colspan="11">Belum ada siswa yang masuk.</td>
+                                        <td colspan="10">Belum ada siswa yang masuk.</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -411,6 +417,9 @@
             </div>
         </section>
     </main>
+
+    <!-- Lembar cetak administrasi. Kosong di layar, diisi saat tombol cetak ditekan. -->
+    <div id="lembar-cetak" class="lembar-cetak" aria-hidden="true"></div>
 
     <!-- ===== Template bagian siswa (dipindah ke #student-body) ===== -->
     <template id="tpl-student-head">
@@ -538,6 +547,17 @@
                             </span>
                         </label>
                     </div>
+                    <div class="presensi-ttd">
+                        <label for="ttd-canvas">Tanda Tangan <span class="req">*</span></label>
+                        <div class="ttd-box">
+                            <canvas id="ttd-canvas" width="440" height="140"></canvas>
+                        </div>
+                        <div class="ttd-tools">
+                            <button type="button" id="ttd-ulang" class="btn btn-ghost btn-sm">Ulangi Tanda
+                                Tangan</button>
+                            <span class="ttd-hint">Gambar tanda tangan Anda di atas.</span>
+                        </div>
+                    </div>
                     <div id="presensi-error" class="form-error" role="alert" hidden></div>
                     <button type="submit" id="presensi-submit" class="btn btn-primary btn-block">
                         <span class="btn-text">Konfirmasi Kehadiran</span>
@@ -663,6 +683,93 @@
                 </form>
                 <p class="modal-note">Form ini wajib diisi. Anda tidak dapat membuka Live Monitor sebelum Berita Acara
                     disubmit.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== MODAL PILIHAN CETAK DAFTAR HADIR (PENGAWAS/ADMIN) ===== -->
+    <div id="modal-cetak" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="cetak-title">
+        <div class="modal-overlay"></div>
+        <div class="modal-card">
+            <div class="modal-head">
+                <img src="logo.png" alt="" class="modal-logo" />
+                <h2 id="cetak-title">Cetak Daftar Hadir</h2>
+                <p>SMP Tunas Hidup Harapan Kita — Penilaian Sumatif</p>
+            </div>
+            <div class="modal-body">
+                <form id="cetak-form">
+                    <div class="form-grid">
+                        <div class="field">
+                            <label for="cetak-ruang">Ruang <span class="req">*</span></label>
+                            <div class="input-wrap">
+                                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6" />
+                                </svg>
+                                <select id="cetak-ruang" required>
+                                    <option value="">Semua Ruang</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="field">
+                            <label for="cetak-mapel">Mata Pelajaran</label>
+                            <div class="input-wrap">
+                                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+                                </svg>
+                                <input type="text" id="cetak-mapel" placeholder="contoh: Matematika"
+                                    autocomplete="off" />
+                            </div>
+                        </div>
+                        <div class="field">
+                            <label for="cetak-tanggal">Tanggal Ujian</label>
+                            <div class="input-wrap">
+                                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="3" y="4" width="18" height="18" rx="2" />
+                                    <line x1="16" y1="2" x2="16" y2="6" />
+                                    <line x1="8" y1="2" x2="8" y2="6" />
+                                    <line x1="3" y1="10" x2="21" y2="10" />
+                                </svg>
+                                <input type="date" id="cetak-tanggal" />
+                            </div>
+                        </div>
+                        <div class="field">
+                            <label for="cetak-waktu">Waktu</label>
+                            <div class="input-wrap">
+                                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="10" />
+                                    <polyline points="12 6 12 12 16 14" />
+                                </svg>
+                                <input type="text" id="cetak-waktu" placeholder="contoh: 07.30 – 09.30 WIB"
+                                    autocomplete="off" />
+                            </div>
+                        </div>
+                        <div class="field field-full">
+                            <label for="cetak-pengawas">Nama Pengawas</label>
+                            <div class="input-wrap">
+                                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                                    <circle cx="9" cy="7" r="4" />
+                                    <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+                                </svg>
+                                <input type="text" id="cetak-pengawas" placeholder="Nama pengawas ruang"
+                                    autocomplete="off" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-ghost" id="cetak-batal">Batal</button>
+                        <button type="submit" class="btn btn-primary" id="cetak-submit">
+                            <span class="btn-text">Cetak</span>
+                            <span class="spinner" hidden aria-hidden="true"></span>
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>

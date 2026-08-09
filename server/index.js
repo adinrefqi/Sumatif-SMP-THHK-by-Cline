@@ -310,6 +310,16 @@ app.post("/api/presensi", requireSession("siswa"), async (req, res) => {
         return res.status(409).json({ error: "Pembagian ruang belum tersedia. Silakan login ulang." });
     }
 
+    // Tanda tangan digital siswa berupa data URL PNG. Wajib diisi dan
+    // dibatasi ukurannya agar database tidak dibanjiri data besar.
+    const signature = String((req.body || {}).signature || "");
+    if (!signature.startsWith("data:image/png;base64,")) {
+        return res.status(400).json({ error: "Tanda tangan wajib diisi." });
+    }
+    if (Buffer.byteLength(signature, "utf8") > 200 * 1024) {
+        return res.status(400).json({ error: "Ukuran tanda tangan terlalu besar." });
+    }
+
     const sudah = await store.getAttendanceBySession(req.session.id);
     if (sudah) {
         req.session.attendanceDone = true;
@@ -324,6 +334,7 @@ app.post("/api/presensi", requireSession("siswa"), async (req, res) => {
             examKey: req.session.exam,
             examTitle: examTitle(req.session.exam),
             room,
+            signature,
         });
         req.session.attendanceDone = true;
         try {
