@@ -59,12 +59,12 @@
 
 ---
 
-## 4. Akun Terdaftar (semua password `thhk2026`, kecuali disebut)
+## 4. Akun Terdaftar
 
 | Jenis | Username | Jumlah |
 |-------|----------|--------|
 | **Admin super user** | `admin` / `admin123` (tanpa Berita Acara) | 1 |
-| **Pengawas SMP THHK** | `adin`, `sunedi`, `faizal`, `atmo`, `thevea`, `widaningsih`, `dyfa`, `morys` | 8 |
+| **Pengawas per ruang** | `pengawas1` / `ruang1` (Ruang 1), `pengawas2` / `ruang2`, `pengawas3` / `ruang3` | 3 |
 | **Siswa Kelas 9** (9A=9, 9B=10, 9C=8) | `calvin`, `celine`, ... `yuriko` | 27 |
 | **Siswa Kelas 8** (8A=7, 8B=7) | `cathleen`, ... `vincentius` | 14 |
 | **Siswa Kelas 7** (7A=10) | `aerilyn`, ... `velove` | 10 |

@@ -547,11 +547,10 @@ async function enterSupervisor() {
     startMonitor();
     loadTokens();
 
-    // Panel khusus admin (izin token pengawas + cek kesiapan soal).
+    // Panel khusus admin (cek kesiapan soal).
     const adminPanels = document.querySelectorAll(".admin-only");
     if (state.session.isAdmin) {
         adminPanels.forEach((el) => { el.hidden = false; });
-        loadIzin();
         loadCekSoal();
     } else {
         adminPanels.forEach((el) => { el.hidden = true; });
@@ -1421,64 +1420,7 @@ async function handleTokenDelete(token, btn) {
 }
 
 /* ------------------------------------------------------------------
-   KHUSUS ADMIN: IZIN TOKEN PENGAWAS
-   ------------------------------------------------------------------ */
-async function loadIzin() {
-    const container = $("izin-matrix");
-    if (!container) return;
-    try {
-        const data = await api("/api/izin");
-        renderIzinMatrix(data);
-    } catch (err) {
-        if (err.status === 401 || err.status === 403) {
-            showToast("Sesi Anda berakhir. Silakan login ulang.");
-            showScreen("screen-login");
-        }
-    }
-}
-
-function renderIzinMatrix(data) {
-    const body = $("izin-matrix");
-    const pengawas = (data.pengawas || []).filter((p) => !p.isAdmin);
-    if (!pengawas.length) {
-        body.innerHTML = '<tr class="empty-row"><td colspan="2">Tidak ada pengawas non-admin.</td></tr>';
-        return;
-    }
-
-    body.innerHTML = pengawas
-        .map((p) => {
-            const checks = (data.examKeys || [])
-                .map((key) => {
-                    const checked = data.allowed?.[p.username]?.[key] ? "checked" : "";
-                    const label = data.examKeys.length > 12 ? key : examLabel(key);
-                    return `<label class="matrix-cell" title="${esc(examLabel(key))}">
-                                <input type="checkbox" data-username="${esc(p.username)}" data-exam="${esc(key)}" ${checked} />
-                                <span class="matrix-exam">${esc(label)}</span>
-                            </label>`;
-                })
-                .join("");
-            return `<tr><td class="matrix-user"><strong>${esc(p.name)}</strong></td><td class="matrix-checks">${checks}</td></tr>`;
-        })
-        .join("");
-}
-
-async function handleIzinToggle(evt) {
-    const input = evt.target;
-    if (!input.dataset.username || !input.dataset.exam) return;
-    try {
-        await api("/api/izin", {
-            method: "POST",
-            body: { username: input.dataset.username, examKey: input.dataset.exam, allowed: input.checked },
-        });
-        showToast(`Izin ${input.checked ? "diberikan" : "dicabut"} untuk ${examLabel(input.dataset.exam)}.`);
-    } catch (err) {
-        showToast(err.message || "Gagal menyimpan izin.");
-        input.checked = !input.checked; // kembalikan
-    }
-}
-
-/* ------------------------------------------------------------------
-   KHUSUS ADMIN: CEK KESiaPAN SOAL
+   KHUSUS ADMIN: CEK KESIAPAN SOAL
    ------------------------------------------------------------------ */
 async function loadCekSoal() {
     const result = $("cek-soal-result");
@@ -2385,7 +2327,6 @@ function init() {
     populateTokenExamSelect();
     $("token-create-form").addEventListener("submit", handleTokenCreate);
 
-    $("izin-matrix")?.addEventListener("change", handleIzinToggle);
     $("cek-soal-btn")?.addEventListener("click", loadCekSoal);
 
     $("finish-cancel").addEventListener("click", () => closeModal("modal-finish"));

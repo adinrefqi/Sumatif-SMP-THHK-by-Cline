@@ -68,9 +68,6 @@ class MemoryStore {
         // menyelesaikan Matematika tidak mengunci akun untuk mapel lain.
         // Hanya pengawas/admin yang bisa membukanya lewat resetStudentLock().
         this.completedSubjects = new Map(); // username -> Set<examKey>
-        // Izin membuat token per (pengawas, mapel). Baris tidak ada = TIDAK
-        // diizinkan (deny by default). Diisi admin lewat UI / endpoint.
-        this.izinMapel = new Map(); // username -> Set<examKey>
         // Seed token bawaan dari config (mode demo / kompatibilitas)
         Object.entries(config.examTokens || {}).forEach(([examToken, entry]) => {
             this.tokens.set(examToken, {
@@ -201,28 +198,6 @@ class MemoryStore {
 
     async resetProgress(username) {
         this.completedSubjects.delete(username);
-    }
-
-    /* ---------------- Izin token (admin -> pengawas) ---------------- */
-    async getIzinMapel(username) {
-        return [...(this.izinMapel.get(username) || [])];
-    }
-
-    async setIzinMapel(username, examKey, allowed) {
-        if (!allowed) {
-            this.izinMapel.get(username)?.delete(examKey);
-            return;
-        }
-        if (!this.izinMapel.has(username)) this.izinMapel.set(username, new Set());
-        this.izinMapel.get(username).add(examKey);
-    }
-
-    async getAllIzin() {
-        const out = [];
-        for (const [u, set] of this.izinMapel) {
-            for (const k of set) out.push({ pengawas_username: u, exam_key: k, allowed: true });
-        }
-        return out;
     }
 
     /* ---------------- File PDF per level (mode demo) ----------------
@@ -768,40 +743,6 @@ class SupabaseStore {
             .delete()
             .eq("username", username);
         if (error) throw error;
-    }
-
-    /* ---------------- Izin token (admin -> pengawas) ---------------- */
-    async getIzinMapel(username) {
-        const { data, error } = await this.client
-            .from(this.tables.izin)
-            .select("exam_key")
-            .eq("pengawas_username", username)
-            .eq("allowed", true);
-        if (error) throw error;
-        return (data || []).map((r) => r.exam_key);
-    }
-
-    async setIzinMapel(username, examKey, allowed) {
-        const { error } = await this.client
-            .from(this.tables.izin)
-            .upsert(
-                {
-                    pengawas_username: username,
-                    exam_key: examKey,
-                    allowed: allowed !== false,
-                    updated_at: nowISO(),
-                },
-                { onConflict: "pengawas_username,exam_key" }
-            );
-        if (error) throw error;
-    }
-
-    async getAllIzin() {
-        const { data, error } = await this.client
-            .from(this.tables.izin)
-            .select("pengawas_username, exam_key, allowed");
-        if (error) throw error;
-        return data || [];
     }
 
     /* ---------------- File PDF per level (produksi) ----------------

@@ -9,7 +9,7 @@ const config = require("../server/config.js");
 
 // 1. isAdmin
 assert.strictEqual(config.isAdmin("admin"), true, 'config.isAdmin("admin") harus true');
-assert.strictEqual(config.isAdmin("adin"), false, 'config.isAdmin("adin") harus false');
+assert.strictEqual(config.isAdmin("pengawas1"), false, 'config.isAdmin("pengawas1") harus false');
 assert.strictEqual(config.isAdmin("tidakada"), false, 'config.isAdmin("tidakada") harus false');
 
 // 2. Room pengawas harus valid: nilai persis sama dengan ruang siswa.

@@ -456,15 +456,6 @@ app.post("/api/tokens", requireSession("pengawas"), async (req, res) => {
         return res.status(400).json({ error: "Pilih mata pelajaran yang valid." });
     }
 
-    // Admin super user boleh semua mapel. Pengawas hanya untuk mapel yang
-    // diizinkan admin (deny by default — tidak ada baris izin = ditolak).
-    if (!config.isAdmin(req.session.username)) {
-        const izin = await store.getIzinMapel(req.session.username);
-        if (!izin.includes(examKey)) {
-            return res.status(403).json({ error: "Anda belum diizinkan membuat token untuk mapel ini." });
-        }
-    }
-
     try {
         const created = await store.createToken({
             examKey,
@@ -491,54 +482,6 @@ app.delete("/api/tokens/:token", requireAdmin(), async (req, res) => {
 
     track(req, "token_dihapus", `Token ${token} dihapus`);
     return res.json({ ok: true });
-});
-
-/* ---------- Izin token (khusus admin) ---------- */
-app.get("/api/izin", requireAdmin(), async (req, res) => {
-    try {
-        const rows = await store.getAllIzin();
-        const allowed = {};
-        for (const r of rows) {
-            if (!r.allowed) continue;
-            if (!allowed[r.pengawas_username]) allowed[r.pengawas_username] = {};
-            allowed[r.pengawas_username][r.exam_key] = true;
-        }
-        res.json({
-            pengawas: config.supervisorCredentials.map((c) => ({
-                username: c.username,
-                name: c.name,
-                isAdmin: config.isAdmin(c.username),
-            })),
-            examKeys: Object.keys(config.examFiles),
-            allowed,
-        });
-    } catch (e) {
-        res.status(500).json({ error: "Gagal memuat izin token." });
-    }
-});
-
-app.post("/api/izin", requireAdmin(), async (req, res) => {
-    const { username, examKey, allowed } = req.body || {};
-
-    const pengawas = config.supervisorCredentials.find((c) => c.username === username);
-    if (!pengawas || config.isAdmin(username)) {
-        return res.status(400).json({ error: "Pengawas tidak valid." });
-    }
-    if (!config.examFiles[examKey]) {
-        return res.status(400).json({ error: "Mata pelajaran tidak valid." });
-    }
-
-    try {
-        await store.setIzinMapel(username, examKey, allowed !== false);
-        track(
-            req,
-            "izin_token",
-            `${req.session.name} ${allowed ? "mengizinkan" : "mencabut izin"} ${pengawas.name} untuk ${examTitle(examKey)}`
-        );
-        return res.json({ ok: true });
-    } catch (e) {
-        return res.status(500).json({ error: "Gagal menyimpan izin token." });
-    }
 });
 
 /* ---------- Cek kesiapan soal (khusus admin) ---------- */
@@ -885,7 +828,7 @@ if (require.main === module) {
         console.log(`  Server aktif  : http://localhost:${PORT}`);
         console.log("------------------------------------------------");
         console.log("  AKUN DEMO:");
-        console.log("    Pengawas : pengawas / thhk2026");
+        console.log("    Pengawas : pengawas1 / ruang1   (Ruang 1)");
         console.log("    Siswa    : siswa2 / rahasia123   (Kelas 9 - Matematika)");
         console.log("    Siswa    : siswa3 / rahasia123   (Kelas 9 - IPA)");
         console.log("  TOKEN DEMO : TOKENR1, TOKENR2, TOKENR3");

@@ -35,20 +35,15 @@ Buka **http://localhost:3000**
 |----------|----------|------------|
 | `admin` | `admin123` | Login langsung ke dashboard — **tidak wajib** mengisi Berita Acara |
 
-### Akun Pengawas SMP THHK (8 guru)
+### Akun Pengawas SMP THHK (3 akun, satu per ruang)
 
-Password semua pengawas: **`thhk2026`** (username = nama depan tanpa gelar).
+Akun pengawas dipakai bersama oleh pengawas ruang yang bersangkutan.
 
-| No | Username | Nama |
-|----|----------|------|
-| 1 | `adin` | Adin Refqi L., S.Pd.I., M.Pd. |
-| 2 | `sunedi` | Sunedi Trihatmojo, S.Pd., M.Pd. |
-| 3 | `faizal` | Muchamad Faizal Umar, S.Pd. |
-| 4 | `atmo` | Atmo Kusumo, S.Pd. |
-| 5 | `thevea` | Thevea Yurike R., S.Pd. |
-| 6 | `widaningsih` | Widaningsih, S.Pd. |
-| 7 | `dyfa` | Dyfa Erwinsyah Putra, S.Pd. |
-| 8 | `morys` | Morys Murti Kenti, S.Pd. |
+| No | Username | Password | Ruang |
+|----|----------|----------|-------|
+| 1 | `pengawas1` | `ruang1` | Ruang 1 |
+| 2 | `pengawas2` | `ruang2` | Ruang 2 |
+| 3 | `pengawas3` | `ruang3` | Ruang 3 |
 
 ### Akun Siswa Kelas 9 SMP THHK (27 siswa)
 
@@ -401,7 +396,7 @@ Jika env vars tidak diisi, aplikasi berjalan dalam **mode demo** (data in-memory
 ### 7.6 Verifikasi Deployment
 
 1. Buka URL aplikasi di Vercel.
-2. Login sebagai **pengawas** (`pengawas` / `thhk2026`) → muncul modal Berita Acara → submit.
+2. Login sebagai **pengawas** (`pengawas1` / `ruang1`) → muncul modal Berita Acara → submit.
 3. Login sebagai **siswa** (`siswa1` / `rahasia123`) → presensi → masukkan token (`TOKEN9A`) → PDF terbuka.
 4. Cek **Supabase Dashboard → Table Editor** — data presensi & berita acara tersimpan di tabel.
 

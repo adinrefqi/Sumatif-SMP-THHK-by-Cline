@@ -111,8 +111,8 @@ async function main() {
     assert.ok(barisSiswa2.presensiAt, "presensiAt harus terisi");
 
     // 3. Pengawas ber-room "Ruang 1": hanya siswa Ruang 1, kejadian tidak memuat siswa ruang lain.
-    r = await api("/api/login", { method: "POST", body: { role: "pengawas", username: "adin", password: "thhk2026" } });
-    assert.strictEqual(r.status, 200, "login pengawas adin harus 200");
+    r = await api("/api/login", { method: "POST", body: { role: "pengawas", username: "pengawas1", password: "ruang1" } });
+    assert.strictEqual(r.status, 200, "login pengawas1 harus 200");
     r = await api("/api/monitor");
     snap = await r.json();
     assert.ok(snap.siswa.length > 0, "pengawas Ruang 1 melihat siswa");
@@ -138,8 +138,8 @@ async function main() {
     assert.strictEqual(r.status, 403, "siswa menandai pelanggaran harus 403");
 
     // 4. Pengawas non-admin tidak boleh reset siswa / hapus token (403).
-    r = await api("/api/login", { method: "POST", body: { role: "pengawas", username: "adin", password: "thhk2026" } });
-    assert.strictEqual(r.status, 200, "login ulang adin harus 200");
+    r = await api("/api/login", { method: "POST", body: { role: "pengawas", username: "pengawas1", password: "ruang1" } });
+    assert.strictEqual(r.status, 200, "login ulang pengawas1 harus 200");
     r = await api("/api/reset-siswa", { method: "POST", body: { username: "siswa2" } });
     assert.strictEqual(r.status, 403, "pengawas non-admin reset siswa harus 403");
     r = await api("/api/tokens/TOKENR2", { method: "DELETE" });
@@ -190,28 +190,13 @@ async function main() {
     r = await api("/api/reset-siswa", { method: "POST", body: { username: "siswa2" } });
     assert.strictEqual(r.status, 200, "admin reset akhir harus 200");
 
-    // 8. Fitur admin: izin token per pengawas×mapel.
-    // Pengawas adin tanpa izin → buat token 403; setelah diizinkan admin → 200.
-    r = await api("/api/login", { method: "POST", body: { role: "pengawas", username: "adin", password: "thhk2026" } });
-    assert.strictEqual(r.status, 200, "login adin (blok 8) harus 200");
-    r = await api("/api/tokens", { method: "POST", body: { examKey: "matematika", label: "Uji Izin" } });
-    assert.strictEqual(r.status, 403, "pengawas tanpa izin membuat token harus 403");
-
-    // Admin beri izin adin untuk matematika, lalu adin boleh membuat token.
-    r = await api("/api/login", { method: "POST", body: { role: "pengawas", username: "admin", password: "admin123" } });
-    assert.strictEqual(r.status, 200, "login ulang admin (blok 8) harus 200");
-    r = await api("/api/izin", { method: "POST", body: { username: "adin", examKey: "matematika", allowed: true } });
-    assert.strictEqual(r.status, 200, "admin memberi izin harus 200");
-    r = await api("/api/izin", { method: "GET" });
-    const izin = await r.json();
-    assert.ok(izin.allowed?.adin?.matematika, "izin adin×matematika harus tampil di matriks");
-
-    r = await api("/api/login", { method: "POST", body: { role: "pengawas", username: "adin", password: "thhk2026" } });
-    assert.strictEqual(r.status, 200, "login ulang adin (setelah izin) harus 200");
-    r = await api("/api/tokens", { method: "POST", body: { examKey: "matematika", label: "Uji Izin" } });
-    assert.strictEqual(r.status, 200, "pengawas berizin membuat token harus 200");
-    r = await api("/api/tokens", { method: "POST", body: { examKey: "indonesia", label: "Uji Izin" } });
-    assert.strictEqual(r.status, 403, "pengawas membuat token mapel tak diizinkan harus 403");
+    // 8. Pengawas (tanpa fitur izin) boleh membuat token semua mapel.
+    r = await api("/api/login", { method: "POST", body: { role: "pengawas", username: "pengawas1", password: "ruang1" } });
+    assert.strictEqual(r.status, 200, "login pengawas1 (blok 8) harus 200");
+    r = await api("/api/tokens", { method: "POST", body: { examKey: "matematika", label: "Uji Pengawas" } });
+    assert.strictEqual(r.status, 200, "pengawas membuat token matematika harus 200");
+    r = await api("/api/tokens", { method: "POST", body: { examKey: "indonesia", label: "Uji Pengawas" } });
+    assert.strictEqual(r.status, 200, "pengawas membuat token indonesia harus 200");
 
     // Admin bisa cek kesiapan soal (mode demo: semua BELUM / DEMO).
     r = await api("/api/login", { method: "POST", body: { role: "pengawas", username: "admin", password: "admin123" } });

@@ -136,10 +136,10 @@ module.exports = {
         },
     },
 
-    // ============ PENGAWAS (8 guru SMP THHK) ============
-    // Kredensial login pengawas.
-    // username = nama depan lowercase (tanpa gelar)
-    // password = kata sandi default: thhk2026
+    // ============ PENGAWAS (3 akun, satu per ruang) ============
+    // Kredensial login pengawas, dipakai bersama oleh pengawas ruang itu.
+    // username = pengawas1/2/3 (sesuai Ruang 1/2/3)
+    // password = ruang1/ruang2/ruang3
     supervisorCredentials: [
         // ADMIN SUPER USER — login langsung ke dashboard tanpa
         // diwajibkan mengisi Berita Acara.
@@ -150,60 +150,25 @@ module.exports = {
             role: "Admin",
         },
         {
-            username: "adin",
-            password: "thhk2026",
-            name: "Adin Refqi L., S.Pd.I., M.Pd.",
+            username: "pengawas1",
+            password: "ruang1",
+            name: "Pengawas Ruang 1",
             role: "Pengawas",
             room: "Ruang 1",
         },
         {
-            username: "sunedi",
-            password: "thhk2026",
-            name: "Sunedi Trihatmojo, S.Pd., M.Pd.",
-            role: "Pengawas",
-            room: "Ruang 1",
-        },
-        {
-            username: "faizal",
-            password: "thhk2026",
-            name: "Muchamad Faizal Umar, S.Pd.",
+            username: "pengawas2",
+            password: "ruang2",
+            name: "Pengawas Ruang 2",
             role: "Pengawas",
             room: "Ruang 2",
         },
         {
-            username: "atmo",
-            password: "thhk2026",
-            name: "Atmo Kusumo, S.Pd.",
-            role: "Pengawas",
-            room: "Ruang 2",
-        },
-        {
-            username: "thevea",
-            password: "thhk2026",
-            name: "Thevea Yurike R., S.Pd.",
+            username: "pengawas3",
+            password: "ruang3",
+            name: "Pengawas Ruang 3",
             role: "Pengawas",
             room: "Ruang 3",
-        },
-        {
-            username: "widaningsih",
-            password: "thhk2026",
-            name: "Widaningsih, S.Pd.",
-            role: "Pengawas",
-            room: "Ruang 3",
-        },
-        {
-            username: "dyfa",
-            password: "thhk2026",
-            name: "Dyfa Erwinsyah Putra, S.Pd.",
-            role: "Pengawas",
-            room: "Ruang 3",
-        },
-        {
-            username: "morys",
-            password: "thhk2026",
-            name: "Morys Murti Kenti, S.Pd.",
-            role: "Pengawas",
-            room: "Ruang 2",
         },
     ],
 
@@ -636,7 +601,6 @@ module.exports = {
             exams: "exams",
             jadwal: "jadwal_ujian",
             progress: "student_progress",
-            izin: "token_izin",
         },
     },
 };
