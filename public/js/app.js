@@ -1424,10 +1424,10 @@ async function handleTokenDelete(token, btn) {
    KHUSUS ADMIN: IZIN TOKEN PENGAWAS
    ------------------------------------------------------------------ */
 async function loadIzin() {
-    const container = $("izin-matrix");
+    const container = $("izin-cards");
     if (!container) return;
     // Jangan pernah menggantung di "Memuat izin…" — selalu ada hasil.
-    container.innerHTML = '<tr class="empty-row"><td colspan="2">Memuat izin…</td></tr>';
+    container.innerHTML = '<div class="log-empty">Memuat izin…</div>';
     try {
         const data = await api("/api/izin");
         renderIzinMatrix(data);
@@ -1438,31 +1438,32 @@ async function loadIzin() {
             return;
         }
         container.innerHTML =
-            '<tr class="empty-row"><td colspan="2" class="matrix-error">' +
+            '<div class="matrix-error">' +
             "Gagal memuat izin. Pastikan tabel <code>token_izin</code> sudah dibuat " +
             "(jalankan migrasi 013 di Supabase). " +
             `<button type="button" class="btn btn-outline btn-xs" data-muat-izin="1">Coba lagi</button>` +
-            "</td></tr>";
+            "</div>";
         container.querySelector("[data-muat-izin]")?.addEventListener("click", loadIzin);
     }
 }
 
 function renderIzinMatrix(data) {
-    const body = $("izin-matrix");
+    const container = $("izin-cards");
     const pengawas = (data.pengawas || []).filter((p) => !p.isAdmin);
     if (!pengawas.length) {
-        body.innerHTML = '<tr class="empty-row"><td colspan="2">Tidak ada pengawas non-admin.</td></tr>';
+        container.innerHTML = '<div class="log-empty">Tidak ada pengawas non-admin.</div>';
         return;
     }
 
-    body.innerHTML = pengawas
+    container.innerHTML = pengawas
         .map((p) => {
-            const roomTag = p.room
-                ? `<span class="matrix-room-tag">${esc(p.room)}</span>`
-                : "";
+            const allowed = data.allowed?.[p.username] || {};
+            const total = (data.examKeys || []).length;
+            const count = (data.examKeys || []).filter((k) => allowed[k]).length;
+            const roomTag = p.room ? `<span class="matrix-room-tag">${esc(p.room)}</span>` : "";
             const checks = (data.examKeys || [])
                 .map((key) => {
-                    const checked = data.allowed?.[p.username]?.[key] ? "checked" : "";
+                    const checked = allowed[key] ? "checked" : "";
                     const label = data.examKeys.length > 12 ? key : examLabel(key);
                     return `<label class="matrix-cell" title="${esc(examLabel(key))}">
                                 <input type="checkbox" data-username="${esc(p.username)}" data-exam="${esc(key)}" ${checked} />
@@ -1470,9 +1471,59 @@ function renderIzinMatrix(data) {
                             </label>`;
                 })
                 .join("");
-            return `<tr><td class="matrix-user"><strong>${esc(p.name)}</strong>${roomTag}</td><td class="matrix-checks">${checks}</td></tr>`;
+            return `
+                <div class="izin-card" data-user="${esc(p.username)}">
+                    <div class="izin-card-head">
+                        <div class="izin-user">
+                            <span class="izin-avatar">${esc((p.name || "?").charAt(0))}</span>
+                            <div class="izin-user-meta">
+                                <strong>${esc(p.name)}</strong>${roomTag}
+                                <span class="izin-count" data-count="${esc(p.username)}">${count}/${total} mapel</span>
+                            </div>
+                        </div>
+                        <div class="izin-actions">
+                            <button type="button" class="btn btn-ghost btn-xs" data-semua="${esc(p.username)}">Semua</button>
+                            <button type="button" class="btn btn-ghost btn-xs" data-kosong="${esc(p.username)}">Bersihkan</button>
+                        </div>
+                    </div>
+                    <div class="matrix-checks">${checks}</div>
+                </div>`;
         })
         .join("");
+
+    // Wiring tombol "Semua" / "Bersihkan"
+    container.querySelectorAll("[data-semua]").forEach((btn) => {
+        btn.addEventListener("click", () => setAllIzin(btn.dataset.semua, data.examKeys, true));
+    });
+    container.querySelectorAll("[data-kosong]").forEach((btn) => {
+        btn.addEventListener("click", () => setAllIzin(btn.dataset.kosong, data.examKeys, false));
+    });
+}
+
+/* Centang/kosongkan semua mapel untuk satu pengawas (loop POST /api/izin). */
+async function setAllIzin(username, examKeys, allowed) {
+    const card = document.querySelector(`.izin-card[data-user="${esc(username)}"]`);
+    setBusy(card, true);
+    try {
+        for (const key of examKeys) {
+            await api("/api/izin", { method: "POST", body: { username, examKey: key, allowed } });
+        }
+        showToast(allowed ? "Semua mapel diizinkan." : "Semua izin dicabut.");
+        await loadIzin();
+    } catch (err) {
+        showToast(err.message || "Gagal menyimpan izin.");
+    } finally {
+        setBusy(card, false);
+    }
+}
+
+async function updateIzinCount(username) {
+    const el = document.querySelector(`[data-count="${esc(username)}"]`);
+    if (!el) return;
+    const card = el.closest(".izin-card");
+    const total = card.querySelectorAll(".matrix-cell").length;
+    const on = card.querySelectorAll(".matrix-cell input:checked").length;
+    el.textContent = `${on}/${total} mapel`;
 }
 
 async function handleIzinToggle(evt) {
@@ -1483,10 +1534,12 @@ async function handleIzinToggle(evt) {
             method: "POST",
             body: { username: input.dataset.username, examKey: input.dataset.exam, allowed: input.checked },
         });
+        updateIzinCount(input.dataset.username);
         showToast(`Izin ${input.checked ? "diberikan" : "dicabut"} untuk ${examLabel(input.dataset.exam)}.`);
     } catch (err) {
         showToast(err.message || "Gagal menyimpan izin.");
         input.checked = !input.checked; // kembalikan
+        updateIzinCount(input.dataset.username);
     }
 }
 
@@ -2398,7 +2451,7 @@ function init() {
     populateTokenExamSelect();
     $("token-create-form").addEventListener("submit", handleTokenCreate);
 
-    $("izin-matrix")?.addEventListener("change", handleIzinToggle);
+    $("izin-cards")?.addEventListener("change", handleIzinToggle);
     $("cek-soal-btn")?.addEventListener("click", loadCekSoal);
 
     $("finish-cancel").addEventListener("click", () => closeModal("modal-finish"));
