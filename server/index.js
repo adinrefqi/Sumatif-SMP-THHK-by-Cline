@@ -507,6 +507,7 @@ app.get("/api/izin", requireAdmin(), async (req, res) => {
             pengawas: config.supervisorCredentials.map((c) => ({
                 username: c.username,
                 name: c.name,
+                room: c.room || null,
                 isAdmin: config.isAdmin(c.username),
             })),
             examKeys: Object.keys(config.examFiles),

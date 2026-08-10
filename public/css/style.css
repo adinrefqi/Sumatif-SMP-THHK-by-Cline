@@ -1652,10 +1652,28 @@ textarea:focus {
     margin: 0 0 12px;
 }
 
+/* Matriks izin: nama pengawas di kiri, chip mapel mengalir di kanan */
+.table-matrix {
+    border-collapse: collapse;
+}
+
 .table-matrix .matrix-user {
     white-space: nowrap;
     vertical-align: top;
     padding-top: 12px;
+    padding-right: 14px;
+}
+
+.matrix-user .matrix-room-tag {
+    display: inline-block;
+    font-size: 0.66rem;
+    font-weight: 700;
+    color: var(--navy-700);
+    background: var(--navy-100);
+    border-radius: 20px;
+    padding: 1px 8px;
+    margin-left: 4px;
+    vertical-align: 1px;
 }
 
 .matrix-checks {
@@ -1669,33 +1687,56 @@ textarea:focus {
 .matrix-cell {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    padding: 3px 7px;
+    gap: 5px;
+    padding: 4px 9px;
     border: 1px solid var(--line);
-    border-radius: 7px;
+    border-radius: 8px;
     background: #fff;
-    font-size: 0.72rem;
+    font-size: 0.74rem;
+    font-weight: 600;
+    color: var(--ink);
     cursor: pointer;
     user-select: none;
-    transition: background 0.12s ease, border-color 0.12s ease;
+    transition: background 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
 }
 
 .matrix-cell:hover {
     border-color: var(--navy-400);
+    box-shadow: 0 2px 8px rgba(23, 55, 94, 0.08);
 }
 
 .matrix-cell input {
     accent-color: var(--navy-700);
     margin: 0;
+    width: 15px;
+    height: 15px;
+    flex: none;
 }
 
 .matrix-cell:has(input:checked) {
     background: var(--gold-soft);
     border-color: #d9b65a;
+    color: var(--navy-800);
 }
 
 .matrix-exam {
     line-height: 1.2;
+    white-space: nowrap;
+}
+
+/* Error state — jangan pernah diam di "Memuat izin…" */
+.matrix-error {
+    text-align: left;
+    color: var(--danger, #b42318);
+    font-size: 0.82rem;
+    padding: 10px 4px;
+}
+
+.matrix-error code {
+    background: var(--muted-soft, #f2f4f7);
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-size: 0.78rem;
 }
 
 .cek-level {

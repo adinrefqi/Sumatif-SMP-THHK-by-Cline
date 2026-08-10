@@ -1426,6 +1426,8 @@ async function handleTokenDelete(token, btn) {
 async function loadIzin() {
     const container = $("izin-matrix");
     if (!container) return;
+    // Jangan pernah menggantung di "Memuat izin…" — selalu ada hasil.
+    container.innerHTML = '<tr class="empty-row"><td colspan="2">Memuat izin…</td></tr>';
     try {
         const data = await api("/api/izin");
         renderIzinMatrix(data);
@@ -1433,7 +1435,15 @@ async function loadIzin() {
         if (err.status === 401 || err.status === 403) {
             showToast("Sesi Anda berakhir. Silakan login ulang.");
             showScreen("screen-login");
+            return;
         }
+        container.innerHTML =
+            '<tr class="empty-row"><td colspan="2" class="matrix-error">' +
+            "Gagal memuat izin. Pastikan tabel <code>token_izin</code> sudah dibuat " +
+            "(jalankan migrasi 013 di Supabase). " +
+            `<button type="button" class="btn btn-outline btn-xs" data-muat-izin="1">Coba lagi</button>` +
+            "</td></tr>";
+        container.querySelector("[data-muat-izin]")?.addEventListener("click", loadIzin);
     }
 }
 
@@ -1447,6 +1457,9 @@ function renderIzinMatrix(data) {
 
     body.innerHTML = pengawas
         .map((p) => {
+            const roomTag = p.room
+                ? `<span class="matrix-room-tag">${esc(p.room)}</span>`
+                : "";
             const checks = (data.examKeys || [])
                 .map((key) => {
                     const checked = data.allowed?.[p.username]?.[key] ? "checked" : "";
@@ -1457,7 +1470,7 @@ function renderIzinMatrix(data) {
                             </label>`;
                 })
                 .join("");
-            return `<tr><td class="matrix-user"><strong>${esc(p.name)}</strong></td><td class="matrix-checks">${checks}</td></tr>`;
+            return `<tr><td class="matrix-user"><strong>${esc(p.name)}</strong>${roomTag}</td><td class="matrix-checks">${checks}</td></tr>`;
         })
         .join("");
 }
