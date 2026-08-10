@@ -601,6 +601,7 @@ module.exports = {
             exams: "exams",
             jadwal: "jadwal_ujian",
             progress: "student_progress",
+            izin: "token_izin",
         },
     },
 };

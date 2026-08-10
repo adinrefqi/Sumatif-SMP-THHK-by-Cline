@@ -12,7 +12,7 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap"
         rel="stylesheet" />
-    <link rel="stylesheet" href="css/style.css?v=20260810d" />
+    <link rel="stylesheet" href="css/style.css?v=20260810e" />
 </head>
 
 <body>
@@ -384,6 +384,31 @@
                         <div id="token-list" class="token-list">
                             <div class="log-empty">Belum ada token. Buat token di atas.</div>
                         </div>
+                    </div>
+                </div>
+
+                <!-- ===== KHUSUS ADMIN: Izin Token Pengawas ===== -->
+                <div class="panel admin-only" id="panel-izin" hidden>
+                    <div class="panel-head">
+                        <h2>Izin Token Pengawas</h2>
+                        <span class="panel-badge">Admin</span>
+                    </div>
+                    <p class="panel-note">
+                        Centang mapel yang boleh dibuat tokennya oleh masing-masing pengawas.
+                        Pengawas tidak bisa membuat token untuk mapel yang tidak dicentang.
+                    </p>
+                    <div class="table-wrap">
+                        <table class="table table-matrix">
+                            <thead>
+                                <tr>
+                                    <th>Pengawas</th>
+                                    <th>Mapel</th>
+                                </tr>
+                            </thead>
+                            <tbody id="izin-matrix">
+                                <tr class="empty-row"><td colspan="2">Memuat izin…</td></tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
 
@@ -855,7 +880,7 @@
     <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
     <!-- PDF.js (secure viewer) -->
-    <script type="module" src="js/app.js?v=20260810c"></script>
+    <script type="module" src="js/app.js?v=20260810e"></script>
 </body>
 
 </html>
