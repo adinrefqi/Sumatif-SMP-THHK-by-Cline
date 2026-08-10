@@ -68,6 +68,9 @@ class MemoryStore {
         // menyelesaikan Matematika tidak mengunci akun untuk mapel lain.
         // Hanya pengawas/admin yang bisa membukanya lewat resetStudentLock().
         this.completedSubjects = new Map(); // username -> Set<examKey>
+        // Izin membuat token per (pengawas, mapel). Baris tidak ada = TIDAK
+        // diizinkan (deny by default). Diisi admin lewat UI / endpoint.
+        this.izinMapel = new Map(); // username -> Set<examKey>
         // Seed token bawaan dari config (mode demo / kompatibilitas)
         Object.entries(config.examTokens || {}).forEach(([examToken, entry]) => {
             this.tokens.set(examToken, {
@@ -198,6 +201,36 @@ class MemoryStore {
 
     async resetProgress(username) {
         this.completedSubjects.delete(username);
+    }
+
+    /* ---------------- Izin token (admin -> pengawas) ---------------- */
+    async getIzinMapel(username) {
+        return [...(this.izinMapel.get(username) || [])];
+    }
+
+    async setIzinMapel(username, examKey, allowed) {
+        if (!allowed) {
+            this.izinMapel.get(username)?.delete(examKey);
+            return;
+        }
+        if (!this.izinMapel.has(username)) this.izinMapel.set(username, new Set());
+        this.izinMapel.get(username).add(examKey);
+    }
+
+    async getAllIzin() {
+        const out = [];
+        for (const [u, set] of this.izinMapel) {
+            for (const k of set) out.push({ pengawas_username: u, exam_key: k, allowed: true });
+        }
+        return out;
+    }
+
+    /* ---------------- File PDF per level (mode demo) ----------------
+     * Tanpa database, semua level memakai env var yang sama. */
+    async getSemuaDriveFileId(examKey) {
+        const f = config.examFiles[examKey];
+        const id = f ? f.driveFileId || "" : "";
+        return { "7": id, "8": id, "9": id, "": id };
     }
 
     /* ---------------- Presensi (siswa) ---------------- */
@@ -735,6 +768,71 @@ class SupabaseStore {
             .delete()
             .eq("username", username);
         if (error) throw error;
+    }
+
+    /* ---------------- Izin token (admin -> pengawas) ---------------- */
+    async getIzinMapel(username) {
+        const { data, error } = await this.client
+            .from(this.tables.izin)
+            .select("exam_key")
+            .eq("pengawas_username", username)
+            .eq("allowed", true);
+        if (error) throw error;
+        return (data || []).map((r) => r.exam_key);
+    }
+
+    async setIzinMapel(username, examKey, allowed) {
+        const { error } = await this.client
+            .from(this.tables.izin)
+            .upsert(
+                {
+                    pengawas_username: username,
+                    exam_key: examKey,
+                    allowed: allowed !== false,
+                    updated_at: nowISO(),
+                },
+                { onConflict: "pengawas_username,exam_key" }
+            );
+        if (error) throw error;
+    }
+
+    async getAllIzin() {
+        const { data, error } = await this.client
+            .from(this.tables.izin)
+            .select("pengawas_username, exam_key, allowed");
+        if (error) throw error;
+        return data || [];
+    }
+
+    /* ---------------- File PDF per level (produksi) ----------------
+     * Satu query untuk semua level kelas mapel ini. Level tanpa baris
+     * khusus jatuh ke class_name='' (default) — konsisten dengan
+     * getExamDriveFileId. */
+    async getSemuaDriveFileId(examKey) {
+        const f = config.examFiles[examKey];
+        const fallback = f ? f.driveFileId || "" : "";
+        const out = { "7": "", "8": "", "9": "", "": "" };
+        try {
+            const { data, error } = await this.client
+                .from(this.tables.exams)
+                .select("class_name, drive_file_id")
+                .eq("exam_key", examKey);
+            if (!error && data) {
+                for (const row of data) {
+                    const level = row.class_name || "";
+                    if (row.drive_file_id) out[level] = row.drive_file_id;
+                }
+            }
+        } catch (e) {
+            // fallback env var di bawah
+        }
+        // Level tanpa ID khusus memakai default (class_name=''), lalu env var.
+        const defaultId = out[""] || fallback;
+        for (const level of ["7", "8", "9"]) {
+            if (!out[level]) out[level] = defaultId;
+        }
+        if (!out[""]) out[""] = fallback;
+        return out;
     }
 
     /* ---------------- Presensi (siswa) ---------------- */

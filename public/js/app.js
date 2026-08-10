@@ -546,6 +546,16 @@ async function enterSupervisor() {
 
     startMonitor();
     loadTokens();
+
+    // Panel khusus admin (izin token pengawas + cek kesiapan soal).
+    const adminPanels = document.querySelectorAll(".admin-only");
+    if (state.session.isAdmin) {
+        adminPanels.forEach((el) => { el.hidden = false; });
+        loadIzin();
+        loadCekSoal();
+    } else {
+        adminPanels.forEach((el) => { el.hidden = true; });
+    }
 }
 
 function openBeritaAcaraModal() {
@@ -1411,6 +1421,168 @@ async function handleTokenDelete(token, btn) {
 }
 
 /* ------------------------------------------------------------------
+   KHUSUS ADMIN: IZIN TOKEN PENGAWAS
+   ------------------------------------------------------------------ */
+async function loadIzin() {
+    const container = $("izin-matrix");
+    if (!container) return;
+    try {
+        const data = await api("/api/izin");
+        renderIzinMatrix(data);
+    } catch (err) {
+        if (err.status === 401 || err.status === 403) {
+            showToast("Sesi Anda berakhir. Silakan login ulang.");
+            showScreen("screen-login");
+        }
+    }
+}
+
+function renderIzinMatrix(data) {
+    const body = $("izin-matrix");
+    const pengawas = (data.pengawas || []).filter((p) => !p.isAdmin);
+    if (!pengawas.length) {
+        body.innerHTML = '<tr class="empty-row"><td colspan="2">Tidak ada pengawas non-admin.</td></tr>';
+        return;
+    }
+
+    body.innerHTML = pengawas
+        .map((p) => {
+            const checks = (data.examKeys || [])
+                .map((key) => {
+                    const checked = data.allowed?.[p.username]?.[key] ? "checked" : "";
+                    const label = data.examKeys.length > 12 ? key : examLabel(key);
+                    return `<label class="matrix-cell" title="${esc(examLabel(key))}">
+                                <input type="checkbox" data-username="${esc(p.username)}" data-exam="${esc(key)}" ${checked} />
+                                <span class="matrix-exam">${esc(label)}</span>
+                            </label>`;
+                })
+                .join("");
+            return `<tr><td class="matrix-user"><strong>${esc(p.name)}</strong></td><td class="matrix-checks">${checks}</td></tr>`;
+        })
+        .join("");
+}
+
+async function handleIzinToggle(evt) {
+    const input = evt.target;
+    if (!input.dataset.username || !input.dataset.exam) return;
+    try {
+        await api("/api/izin", {
+            method: "POST",
+            body: { username: input.dataset.username, examKey: input.dataset.exam, allowed: input.checked },
+        });
+        showToast(`Izin ${input.checked ? "diberikan" : "dicabut"} untuk ${examLabel(input.dataset.exam)}.`);
+    } catch (err) {
+        showToast(err.message || "Gagal menyimpan izin.");
+        input.checked = !input.checked; // kembalikan
+    }
+}
+
+/* ------------------------------------------------------------------
+   KHUSUS ADMIN: CEK KESiaPAN SOAL
+   ------------------------------------------------------------------ */
+async function loadCekSoal() {
+    const result = $("cek-soal-result");
+    if (!result) return;
+    const btn = $("cek-soal-btn");
+    try {
+        setBusy(btn, true);
+        const data = await api("/api/cek-soal");
+        renderCekSoal(data.results || [], false);
+    } catch (err) {
+        if (result) result.innerHTML = `<div class="log-empty">Gagal memuat status soal: ${esc(err.message)}</div>`;
+    } finally {
+        setBusy(btn, false);
+    }
+}
+
+/* renderDaftarMapel: tampilkan daftar mapel + badge per level + tombol uji.
+ * Jika byLevel diisi (hasil uji), tampilkan status per level; jika tidak,
+ * tampilkan status instan (TERSEDIA/BELUM) dari /api/cek-soal. */
+function renderCekSoal(results, isDetail) {
+    const result = $("cek-soal-result");
+    if (!result) return;
+
+    if (!results.length) {
+        result.innerHTML = '<div class="log-empty">Tidak ada mapel.</div>';
+        return;
+    }
+
+    result.innerHTML = results
+        .map((r) => {
+            const levels = (r.byLevel || [])
+                .map((l) => {
+                    const cls = l.status === "OK" ? "badge-success" : l.status === "ERROR" ? "badge-danger" : "badge-muted";
+                    const size = l.size ? ` · ${Math.round(l.size / 1024)} KB` : "";
+                    const lvl = l.level || "default";
+                    return `<span class="badge ${cls} cek-level" title="Kelas ${esc(lvl)}">${esc(lvl)}: ${esc(l.status)}${size}</span>`;
+                })
+                .join(" ");
+            return `
+                <div class="log-item">
+                    <span class="log-dot event-presensi"></span>
+                    <div class="log-body">
+                        <div class="log-title"><strong>${esc(r.title)}</strong></div>
+                        <div class="log-detail">${levels}</div>
+                    </div>
+                    ${state.session?.isAdmin
+                        ? `<button type="button" class="btn btn-outline btn-xs" data-cek="${esc(r.examKey)}">Uji</button>`
+                        : ""}
+                </div>`;
+        })
+        .join("");
+
+    // Wiring tombol uji per mapel
+    result.querySelectorAll("[data-cek]").forEach((btn) => {
+        btn.addEventListener("click", () => runCekSoalMapel(btn.dataset.cek, btn));
+    });
+}
+
+async function runCekSoalMapel(examKey, btn) {
+    setBusy(btn, true);
+    try {
+        const data = await api(`/api/cek-soal/${encodeURIComponent(examKey)}`);
+        // Ganti badge baris ini dengan hasil uji aktual
+        renderCekSoalDetail(data);
+    } catch (err) {
+        showToast(err.message || "Gagal menguji mapel.");
+    } finally {
+        setBusy(btn, false);
+    }
+}
+
+function renderCekSoalDetail(data) {
+    const result = $("cek-soal-result");
+    const levels = (data.byLevel || [])
+        .map((l) => {
+            const cls = l.status === "OK" ? "badge-success" : l.status === "ERROR" ? "badge-danger" : "badge-muted";
+            const size = l.size ? ` · ${Math.round(l.size / 1024)} KB` : "";
+            const lvl = l.level || "default";
+            return `<span class="badge ${cls} cek-level">${esc(lvl)}: ${esc(l.status)}${size}</span>`;
+        })
+        .join("");
+
+    // Update baris mapel yang sesuai (cari title)
+    const items = result.querySelectorAll(".log-item");
+    let updated = false;
+    for (const item of items) {
+        const title = item.querySelector(".log-title strong");
+        if (title && title.textContent === data.title) {
+            const detail = item.querySelector(".log-detail");
+            if (detail) detail.innerHTML = levels;
+            updated = true;
+            break;
+        }
+    }
+    if (!updated) {
+        // fallback: tampilkan di atas
+        const div = document.createElement("div");
+        div.className = "log-item";
+        div.innerHTML = `<span class="log-dot event-presensi"></span><div class="log-body"><div class="log-title"><strong>${esc(data.title)}</strong></div><div class="log-detail">${levels}</div></div>`;
+        result.prepend(div);
+    }
+}
+
+/* ------------------------------------------------------------------
    ALUR SISWA
    ------------------------------------------------------------------ */
 async function enterStudent() {
@@ -2212,6 +2384,9 @@ function init() {
 
     populateTokenExamSelect();
     $("token-create-form").addEventListener("submit", handleTokenCreate);
+
+    $("izin-matrix")?.addEventListener("change", handleIzinToggle);
+    $("cek-soal-btn")?.addEventListener("click", loadCekSoal);
 
     $("finish-cancel").addEventListener("click", () => closeModal("modal-finish"));
     $("finish-confirm").addEventListener("click", handleFinishConfirm);

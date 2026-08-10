@@ -190,6 +190,42 @@ async function main() {
     r = await api("/api/reset-siswa", { method: "POST", body: { username: "siswa2" } });
     assert.strictEqual(r.status, 200, "admin reset akhir harus 200");
 
+    // 8. Fitur admin: izin token per pengawas×mapel.
+    // Pengawas adin tanpa izin → buat token 403; setelah diizinkan admin → 200.
+    r = await api("/api/login", { method: "POST", body: { role: "pengawas", username: "adin", password: "thhk2026" } });
+    assert.strictEqual(r.status, 200, "login adin (blok 8) harus 200");
+    r = await api("/api/tokens", { method: "POST", body: { examKey: "matematika", label: "Uji Izin" } });
+    assert.strictEqual(r.status, 403, "pengawas tanpa izin membuat token harus 403");
+
+    // Admin beri izin adin untuk matematika, lalu adin boleh membuat token.
+    r = await api("/api/login", { method: "POST", body: { role: "pengawas", username: "admin", password: "admin123" } });
+    assert.strictEqual(r.status, 200, "login ulang admin (blok 8) harus 200");
+    r = await api("/api/izin", { method: "POST", body: { username: "adin", examKey: "matematika", allowed: true } });
+    assert.strictEqual(r.status, 200, "admin memberi izin harus 200");
+    r = await api("/api/izin", { method: "GET" });
+    const izin = await r.json();
+    assert.ok(izin.allowed?.adin?.matematika, "izin adin×matematika harus tampil di matriks");
+
+    r = await api("/api/login", { method: "POST", body: { role: "pengawas", username: "adin", password: "thhk2026" } });
+    assert.strictEqual(r.status, 200, "login ulang adin (setelah izin) harus 200");
+    r = await api("/api/tokens", { method: "POST", body: { examKey: "matematika", label: "Uji Izin" } });
+    assert.strictEqual(r.status, 200, "pengawas berizin membuat token harus 200");
+    r = await api("/api/tokens", { method: "POST", body: { examKey: "indonesia", label: "Uji Izin" } });
+    assert.strictEqual(r.status, 403, "pengawas membuat token mapel tak diizinkan harus 403");
+
+    // Admin bisa cek kesiapan soal (mode demo: semua BELUM / DEMO).
+    r = await api("/api/login", { method: "POST", body: { role: "pengawas", username: "admin", password: "admin123" } });
+    assert.strictEqual(r.status, 200, "login ulang admin (cek soal) harus 200");
+    r = await api("/api/cek-soal");
+    assert.strictEqual(r.status, 200, "cek-soal harus 200");
+    const cek = await r.json();
+    assert.ok(cek.results.length >= 3, "cek-soal harus berisi semua mapel");
+    assert.ok(cek.results[0].byLevel.length === 4, "cek-soal harus mencakup 4 level kelas");
+    r = await api("/api/cek-soal/matematika");
+    assert.strictEqual(r.status, 200, "uji unduh satu mapel harus 200");
+    const uji = await r.json();
+    assert.strictEqual(uji.byLevel[0].status, "DEMO", "tanpa berkas Google Drive harus DEMO");
+
     console.log("OK — seluruh verifikasi end-to-end lulus");
 }
 
